@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component
  * The `commence` method is called when an authentication error occurs. It logs the error and sends a JSON response
  * with the error details.
  */
+
 @Component
 class JwtAuthenticationEntryPoint(private val objectMapper: ObjectMapper) : AuthenticationEntryPoint {
     

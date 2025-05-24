@@ -64,10 +64,10 @@ class SecurityConfig(@Autowired private val jwtAuthenticationEntryPoint: JwtAuth
 
     // The security filter chain is responsible for configuring the security settings for the application.
     // It sets up JWT authentication, CORS configuration, and exception handling.
-    // The `evalifyServerFilterChain` method configures the security filter chain for the application.
+    // The `devlabsServerFilterChain` method configures the security filter chain for the application.
     @Bean
     @Throws(Exception::class)
-    fun evalifyServerFilterChain(http: HttpSecurity): SecurityFilterChain {
+    fun devlabsServerFilterChain(http: HttpSecurity): SecurityFilterChain {
         // Configure security with more permissive settings to fix 401 errors
         http
             .csrf { csrf -> csrf.disable() }
