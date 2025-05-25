@@ -31,4 +31,6 @@ class User (
     val isActive: Boolean = true,
     val createdAt: Timestamp = Timestamp.from(Instant.now()),
     val lastPasswordChange: Timestamp? = null
+
+    
 )

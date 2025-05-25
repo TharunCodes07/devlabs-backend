@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/users")
 class UserController (private val userService: UserService)
 {
-    @GetMapping("/")
+    @GetMapping
     fun getAllUsers(): ResponseEntity<List<User>>{
         return ResponseEntity(
             userService.getAllUsers(),
@@ -18,7 +18,7 @@ class UserController (private val userService: UserService)
         )
     }
 
-    @PostMapping("/")
+    @PostMapping
     fun createUser(@RequestBody user: User): ResponseEntity<User>{
         return ResponseEntity(
             userService.createUser(user),
