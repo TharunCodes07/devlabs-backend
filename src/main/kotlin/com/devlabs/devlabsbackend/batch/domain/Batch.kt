@@ -1,5 +1,6 @@
 package com.devlabs.devlabsbackend.batch.domain
 
+import com.devlabs.devlabsbackend.semester.domain.Semester
 import com.devlabs.devlabsbackend.user.domain.User
 import jakarta.persistence.*
 import java.time.Year
@@ -23,6 +24,6 @@ class Batch (
     @ManyToMany(fetch = FetchType.LAZY)
     val managers: MutableSet<User> = mutableSetOf(),
 
-//    @OneToMany(fetch = FetchType.LAZY , cascade = [CascadeType.ALL])
-//    val semesters = MutableSet<Semester> = mutableSetOf()
+    @OneToMany(fetch = FetchType.LAZY, cascade =  [CascadeType.ALL])
+    val semester: MutableSet<Semester> = mutableSetOf()
     )
