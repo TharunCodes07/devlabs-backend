@@ -11,7 +11,6 @@ enum class CourseType{
     ELECTIVE,
     MICRO_CREDENTIAL
 }
-
 @Entity
 @Table(name = "course")
 class Course(
@@ -22,12 +21,16 @@ class Course(
     var description: String,
     var type: CourseType,
 
-    @ManyToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "semester_id")
     var semester: Semester,
+
     @OneToMany(fetch = FetchType.LAZY)
     var students: MutableSet<User> = mutableSetOf(),
+
     @OneToMany(fetch = FetchType.LAZY)
     var instructors: MutableSet<User> = mutableSetOf(),
+
     @OneToMany(fetch = FetchType.LAZY)
     var batches: MutableSet<Batch> = mutableSetOf()
 )

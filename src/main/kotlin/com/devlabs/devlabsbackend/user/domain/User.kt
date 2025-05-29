@@ -1,13 +1,9 @@
 package com.devlabs.devlabsbackend.user.domain
 
 import jakarta.persistence.*
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
-import jakarta.persistence.Table
 import java.sql.Timestamp
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 
 enum class Role {
     STUDENT,
@@ -22,15 +18,14 @@ class User (
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     val id: UUID? = null,
-    val name: String,
-    val email: String,
-    val profileId: String,
-    val image: String? = null,
-    val role: Role,
-    val phoneNumber: String,
-    val isActive: Boolean = true,
-    val createdAt: Timestamp = Timestamp.from(Instant.now()),
-    val lastPasswordChange: Timestamp? = null
-
-    
+    var name: String,
+    var email: String,
+    var profileId: String,
+    var password: String,
+    var image: String? = null,
+    var role: Role,
+    var phoneNumber: String,
+    var isActive: Boolean = true,
+    var createdAt: Timestamp = Timestamp.from(Instant.now()),
+    var lastPasswordChange: Timestamp? = null
 )

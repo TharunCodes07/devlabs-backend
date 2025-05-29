@@ -25,4 +25,12 @@ class UserController (private val userService: UserService)
             HttpStatus.CREATED
         )
     }
+
+    @PostMapping("/bulk")
+    fun createUsers(@RequestBody users: List<User>): ResponseEntity<List<User>>{
+        return ResponseEntity(
+            userService.createUsers(users),
+            HttpStatus.CREATED
+        )
+    }
 }

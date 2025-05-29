@@ -19,9 +19,6 @@ class Semester(
     @OneToMany(fetch = FetchType.LAZY,cascade = [CascadeType.ALL], mappedBy = "semester")
     var courses: MutableList<Course> = mutableListOf(),
 
-//    @OneToMany(fetch = FetchType.LAZY)
-//    var batch: MutableList<Batch> = mutableListOf(),
-
     @ManyToMany(cascade = [CascadeType.ALL], fetch = FetchType.LAZY)
     @JoinTable(
         name = "semester_managers",
