@@ -1,7 +1,7 @@
 package com.devlabs.devlabsbackend.rubric.domain
 
-import com.devlabs.devlabsbackend.user.domain.User
 import com.devlabs.devlabsbackend.review.domain.Review
+import com.devlabs.devlabsbackend.user.domain.User
 import jakarta.persistence.*
 import java.sql.Timestamp
 import java.time.Instant
@@ -118,7 +118,6 @@ class RubricItem(
     var score: Double? = null, // Actual score given
     var feedback: String? = null, // Text feedback for this criteria
     var orderIndex: Int = 0,
-    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "rubric_id")
     var rubric: Rubric

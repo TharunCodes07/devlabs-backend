@@ -7,5 +7,8 @@ import java.util.UUID
 
 @RepositoryRestResource(path = "user")
 interface UserRepository : JpaRepository<User, UUID> {
-
+    fun findByEmail(email: String): User?
+    fun findByProfileId(profileId: String): User?
+    fun existsByEmail(email: String): Boolean
+    fun existsByProfileId(profileId: String): Boolean
 }

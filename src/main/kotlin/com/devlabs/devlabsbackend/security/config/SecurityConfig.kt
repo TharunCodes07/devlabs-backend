@@ -28,7 +28,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
     It disables CSRF protection and allows all requests.
  */
 @Configuration
-@Profile("dev")
+@Profile("dev & !auth")
 class DevSecurityConfig {
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
