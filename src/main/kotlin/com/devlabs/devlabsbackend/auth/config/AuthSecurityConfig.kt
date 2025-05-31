@@ -53,13 +53,13 @@ class AuthSecurityConfig(
             .cors { it.configurationSource(corsConfigurationSource()) }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { auth ->
-                auth
-                    .requestMatchers(
+                auth                    .requestMatchers(
                         "/api/auth/**",
                         "/api/users/bulk-create", // Allow bulk user creation without auth
                         "/v3/api-docs/**",
                         "/swagger-ui/**",
                         "/swagger-ui.html",
+                        "/docs", // Allow access to Swagger UI documentation
                         "/error",
                         "/actuator/**"
                     ).permitAll()

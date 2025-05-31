@@ -152,9 +152,8 @@ class ProjectService(
         val user = userRepository.findById(userId).orElseThrow {
             NotFoundException("User with id $userId not found")
         }
-        
-        // Get all teams where user is a member
-        val teams = teamRepository.findByMember(user)
+          // Get all teams where user is a member
+        val teams = teamRepository.findByMemberList(user)
         
         // Get all projects for these teams
         return teams.flatMap { team ->
