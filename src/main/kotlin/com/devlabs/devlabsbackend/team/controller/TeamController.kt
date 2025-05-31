@@ -29,10 +29,13 @@ class TeamController(
         }
     }
 
-    @GetMapping("/user/{userId}")
-    fun getTeamsByUser(@PathVariable userId: UUID): ResponseEntity<Any> {
+    @GetMapping
+    fun getAllTeams(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int
+    ): ResponseEntity<Any> {
         return try {
-            val teams = teamService.getTeamsByUser(userId)
+            val teams = teamService.getAllTeams(page, size)
             ResponseEntity.ok(teams)
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -40,11 +43,29 @@ class TeamController(
         }
     }
 
+    @GetMapping("/user/{userId}")
+    fun getTeamsByUser(
+        @PathVariable userId: UUID,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int
+    ): ResponseEntity<Any> {
+        return try {
+            val teams = teamService.getTeamsByUser(userId, page, size)
+            ResponseEntity.ok(teams)
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to get teams"))
+        }
+    }
 
     @GetMapping("/search")
-    fun searchTeams(@RequestParam query: String): ResponseEntity<Any> {
+    fun searchTeams(
+        @RequestParam query: String,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int
+    ): ResponseEntity<Any> {
         return try {
-            val teams = teamService.searchTeams(query)
+            val teams = teamService.searchTeams(query, page, size)
             ResponseEntity.ok(teams)
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

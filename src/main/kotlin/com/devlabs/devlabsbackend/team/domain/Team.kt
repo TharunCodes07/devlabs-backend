@@ -2,6 +2,7 @@ package com.devlabs.devlabsbackend.team.domain
 
 import com.devlabs.devlabsbackend.project.domain.Project
 import com.devlabs.devlabsbackend.user.domain.User
+import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.persistence.*
 import java.sql.Timestamp
 import java.time.Instant
@@ -22,9 +23,8 @@ class Team(
         joinColumns = [JoinColumn(name = "team_id")],
         inverseJoinColumns = [JoinColumn(name = "user_id")]
     )
-    var members: MutableSet<User> = mutableSetOf(),
-
-    @OneToMany(mappedBy = "team", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+    var members: MutableSet<User> = mutableSetOf(),    @OneToMany(mappedBy = "team", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+    @JsonIgnore
     var projects: MutableSet<Project> = mutableSetOf(),
     
     val createdAt: Timestamp = Timestamp.from(Instant.now()),
