@@ -52,7 +52,7 @@ class JwtService {
         claims["userId"] = user.id.toString()
         claims["email"] = user.email
         claims["role"] = user.role.name
-        claims["profileId"] = user.profileId
+        claims["profileId"] = user.profileId.toString()
         claims["name"] = user.name
 
         return Jwts.builder()

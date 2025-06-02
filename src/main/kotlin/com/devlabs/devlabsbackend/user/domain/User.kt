@@ -20,7 +20,7 @@ class User (
     val id: UUID? = null,
     var name: String,
     var email: String,
-    var profileId: String,
+    var profileId: String? = null,
     var password: String,
     var image: String? = null,
     var role: Role,
