@@ -8,7 +8,7 @@ data class UserResponse(
     val id: UUID?,
     val name: String,
     val email: String,
-    val profileId: String,
+    val profileId: String? = null,
     val image: String?,
     val role: Role,
     val phoneNumber: String,

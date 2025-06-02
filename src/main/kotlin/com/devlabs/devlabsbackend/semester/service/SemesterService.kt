@@ -3,8 +3,13 @@ package com.devlabs.devlabsbackend.semester.service
 import com.devlabs.devlabsbackend.batch.repository.BatchRepository
 import com.devlabs.devlabsbackend.core.exception.NotFoundException
 import com.devlabs.devlabsbackend.course.repository.CourseRepository
+import com.devlabs.devlabsbackend.semester.domain.DTO.SemesterResponse
+import com.devlabs.devlabsbackend.semester.domain.Semester
 import com.devlabs.devlabsbackend.semester.repository.SemesterRepository
+import com.devlabs.devlabsbackend.user.domain.DTO.UserResponse
 import com.devlabs.devlabsbackend.user.repository.UserRepository
+import com.devlabs.devlabsbackend.user.service.toUserResponse
+import jakarta.persistence.Query
 import org.springframework.stereotype.Service
 import java.util.*
 
@@ -21,7 +26,7 @@ class SemesterService
             NotFoundException("Semester $semesterId not found")
         }
         val managers = userRepository.findAllById(managersId);
-        if(managers.size != managersId.size){
+        if (managers.size != managersId.size) {
             throw NotFoundException("Some managers could not be found")
         }
         semester.managers.addAll(managers)
@@ -33,7 +38,7 @@ class SemesterService
             NotFoundException("Semester $semesterId not found")
         }
         val managers = userRepository.findAllById(managersId)
-        if(managers.size != managersId.size){
+        if (managers.size != managersId.size) {
             throw NotFoundException("Some managers could not be found")
         }
         semester.managers.removeAll(managers)
@@ -57,4 +62,22 @@ class SemesterService
         semester.courses.removeAll(courses)
         semesterRepository.save(semester)
     }
+
+    fun getAllSemester(): List<SemesterResponse> {
+        return semesterRepository.findAll().map { it.toSemesterResponse() }
+    }
+
+    fun searchSemester(query: String): List<SemesterResponse> {
+        return semesterRepository.findByNameOrYearContainingIgnoreCase(query).map { user -> user.toSemesterResponse() }
+    }
+
+}
+
+fun Semester.toSemesterResponse(): SemesterResponse {
+    return SemesterResponse(
+        id = this.id!!,
+        name = this.name,
+        year = this.year,
+        isActive = this.isActive
+    )
 }

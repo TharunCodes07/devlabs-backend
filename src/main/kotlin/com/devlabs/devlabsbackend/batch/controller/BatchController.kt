@@ -1,6 +1,10 @@
 package com.devlabs.devlabsbackend.batch.controller
 
+import com.devlabs.devlabsbackend.batch.domain.dto.BatchResponse
 import com.devlabs.devlabsbackend.batch.service.BatchService
+import com.devlabs.devlabsbackend.semester.domain.DTO.SemesterResponse
+import org.apache.coyote.Response
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import java.util.*
 
@@ -38,5 +42,18 @@ class BatchController(
     @PutMapping("/{batchId}/remove-managers")
     fun removeManagers(@RequestBody userIds: List<UUID>, @PathVariable batchId: UUID) {
         batchService.removeManagersFromBatch(batchId, userIds)
+    }
+
+    @GetMapping
+    fun getAllBatches(): ResponseEntity<List<BatchResponse>> {
+        val batches = batchService.getAllBatches()
+        return ResponseEntity.ok(batches)
+    }
+
+    @GetMapping("/search")
+    fun search(@RequestParam query: String): ResponseEntity<List<BatchResponse>> {
+        return ResponseEntity.ok(
+            batchService.searchBatches(query)
+        )
     }
 }

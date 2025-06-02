@@ -23,7 +23,7 @@ data class UserDTO(
     val id: String?,
     val name: String,
     val email: String,
-    val profileId: String,
+    val profileId: String?,
     val role: String,
     val phoneNumber: String,
     val image: String?,
