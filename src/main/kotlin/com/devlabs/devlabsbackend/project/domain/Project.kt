@@ -29,15 +29,13 @@ class Project(
     @Column(columnDefinition = "TEXT")
     var objectives: String? = null,
     
-    var status: ProjectStatus = ProjectStatus.PROPOSED,
-
-    @ManyToOne(fetch = FetchType.LAZY)
+    var status: ProjectStatus = ProjectStatus.PROPOSED,    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "team_id")
     var team: Team,
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "course_id")
-    var course: Course,
+    @JoinColumn(name = "course_id", nullable = true)
+    var course: Course? = null,
 
     @OneToMany(mappedBy = "project", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
     var reviews: MutableSet<Review> = mutableSetOf(),

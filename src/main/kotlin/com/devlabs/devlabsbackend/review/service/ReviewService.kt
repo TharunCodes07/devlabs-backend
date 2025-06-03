@@ -33,14 +33,14 @@ class ReviewService(
         val project = projectRepository.findById(reviewData.projectId).orElseThrow {
             NotFoundException("Project with id ${reviewData.projectId} not found")
         }
-        
-        val reviewer = userRepository.findById(reviewerId).orElseThrow {
+          val reviewer = userRepository.findById(reviewerId).orElseThrow {
             NotFoundException("User with id $reviewerId not found")
         }
         
         // Validate reviewer is course instructor or faculty
+        val course = project.course
         if (reviewer.role !in listOf(Role.FACULTY, Role.ADMIN) || 
-            !project.course.instructors.contains(reviewer)) {
+            (course != null && !course.instructors.contains(reviewer))) {
             throw IllegalArgumentException("Only course instructors can create reviews")
         }
         val review = Review(

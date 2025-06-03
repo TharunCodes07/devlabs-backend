@@ -12,15 +12,12 @@ import java.util.*
 @RequestMapping("/projects")
 class ProjectController(
     private val projectService: ProjectService
-) {
-
-    @PostMapping
+) {    @PostMapping
     fun createProject(
-        @RequestBody request: CreateProjectRequest,
-        @RequestHeader("X-User-Id") userId: UUID
+        @RequestBody request: CreateProjectRequest
     ): ResponseEntity<Any> {
         return try {
-            val project = projectService.createProject(request, userId)
+            val project = projectService.createProject(request)
             ResponseEntity.status(HttpStatus.CREATED).body(project)
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf("error" to e.message))
@@ -102,12 +99,14 @@ class ProjectController(
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(mapOf("error" to "Failed to auto-complete projects"))
         }
-    }
-
-    @GetMapping("/team/{teamId}")
-    fun getProjectsByTeam(@PathVariable teamId: UUID): ResponseEntity<Any> {
+    }    @GetMapping("/team/{teamId}")
+    fun getProjectsByTeam(
+        @PathVariable teamId: UUID,
+        @RequestParam(required = false, defaultValue = "0") page: Int,
+        @RequestParam(required = false, defaultValue = "10") size: Int
+    ): ResponseEntity<Any> {
         return try {
-            val projects = projectService.getProjectsByTeam(teamId)
+            val projects = projectService.getProjectsByTeam(teamId, page, size)
             ResponseEntity.ok(projects)
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -116,9 +115,13 @@ class ProjectController(
     }
 
     @GetMapping("/course/{courseId}")
-    fun getProjectsByCourse(@PathVariable courseId: UUID): ResponseEntity<Any> {
+    fun getProjectsByCourse(
+        @PathVariable courseId: UUID,
+        @RequestParam(required = false, defaultValue = "0") page: Int,
+        @RequestParam(required = false, defaultValue = "10") size: Int
+    ): ResponseEntity<Any> {
         return try {
-            val projects = projectService.getProjectsByCourse(courseId)
+            val projects = projectService.getProjectsByCourse(courseId, page, size)
             ResponseEntity.ok(projects)
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -127,31 +130,56 @@ class ProjectController(
     }
 
     @GetMapping("/user/{userId}")
-    fun getProjectsForUser(@PathVariable userId: UUID): ResponseEntity<Any> {
+    fun getProjectsForUser(
+        @PathVariable userId: UUID,
+        @RequestParam(required = false, defaultValue = "0") page: Int,
+        @RequestParam(required = false, defaultValue = "10") size: Int
+    ): ResponseEntity<Any> {
         return try {
-            val projects = projectService.getProjectsForUser(userId)
+            val projects = projectService.getProjectsForUser(userId, page, size)
             ResponseEntity.ok(projects)
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(mapOf("error" to "Failed to get projects"))
         }
-    }
-
-    @GetMapping("/search")
-    fun searchProjects(@RequestParam query: String): ResponseEntity<Any> {
+    }    @GetMapping("/search")
+    fun searchProjects(
+        @RequestParam query: String,
+        @RequestParam(required = false, defaultValue = "0") page: Int,
+        @RequestParam(required = false, defaultValue = "10") size: Int
+    ): ResponseEntity<Any> {
         return try {
-            val projects = projectService.searchProjects(query)
+            val projects = projectService.searchProjects(query, page, size)
             ResponseEntity.ok(projects)
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(mapOf("error" to "Failed to search projects"))
         }
     }
+    
+    @GetMapping("/team/{teamId}/search")
+    fun searchProjectsByTeam(
+        @PathVariable teamId: UUID,
+        @RequestParam query: String,
+        @RequestParam(required = false, defaultValue = "0") page: Int,
+        @RequestParam(required = false, defaultValue = "10") size: Int
+    ): ResponseEntity<Any> {
+        return try {
+            val projects = projectService.searchProjectsByTeam(teamId, query, page, size)
+            ResponseEntity.ok(projects)
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to search projects for team"))
+        }
+    }
 
     @GetMapping("/pending-approval")
-    fun getProjectsNeedingApproval(): ResponseEntity<Any> {
+    fun getProjectsNeedingApproval(
+        @RequestParam(required = false, defaultValue = "0") page: Int,
+        @RequestParam(required = false, defaultValue = "10") size: Int
+    ): ResponseEntity<Any> {
         return try {
-            val projects = projectService.getProjectsNeedingApproval()
+            val projects = projectService.getProjectsNeedingApproval(page, size)
             ResponseEntity.ok(projects)
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -160,9 +188,12 @@ class ProjectController(
     }
 
     @GetMapping("/ongoing")
-    fun getOngoingProjects(): ResponseEntity<Any> {
+    fun getOngoingProjects(
+        @RequestParam(required = false, defaultValue = "0") page: Int,
+        @RequestParam(required = false, defaultValue = "10") size: Int
+    ): ResponseEntity<Any> {
         return try {
-            val projects = projectService.getOngoingProjects()
+            val projects = projectService.getOngoingProjects(page, size)
             ResponseEntity.ok(projects)
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
