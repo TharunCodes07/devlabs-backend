@@ -23,10 +23,11 @@ class Team(
         joinColumns = [JoinColumn(name = "team_id")],
         inverseJoinColumns = [JoinColumn(name = "user_id")]
     )
-    var members: MutableSet<User> = mutableSetOf(),    @OneToMany(mappedBy = "team", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+    var members: MutableSet<User> = mutableSetOf(),
+    @OneToMany(mappedBy = "team", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
     @JsonIgnore
     var projects: MutableSet<Project> = mutableSetOf(),
-    
+
     val createdAt: Timestamp = Timestamp.from(Instant.now()),
     var updatedAt: Timestamp = Timestamp.from(Instant.now())
 ) {

@@ -1,13 +1,19 @@
 package com.devlabs.devlabsbackend.project.domain.DTO
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonSetter
+import com.fasterxml.jackson.annotation.Nulls
 import java.util.*
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class CreateProjectRequest(
     val title: String,
     val description: String,
     val objectives: String? = null,
     val teamId: UUID,
-    val courseId: UUID
+    
+    @JsonSetter(nulls = Nulls.SKIP)
+    val courseId: UUID? = null
 )
 
 data class UpdateProjectRequest(
