@@ -34,8 +34,7 @@ class ProjectService(
             }
             // Initialize members collection to avoid LazyInitializationException
             team.members.size
-            
-            // Course is optional now
+              // Course is optional now
             val course = projectData.courseId?.let {
                 courseRepository.findById(it).orElseThrow {
                     NotFoundException("Course with id ${projectData.courseId} not found")
@@ -48,6 +47,7 @@ class ProjectService(
                 title = projectData.title,
                 description = projectData.description,
                 objectives = projectData.objectives,
+                githubUrl = projectData.githubUrl,
                 team = team,
                 course = course
             )
@@ -72,16 +72,7 @@ class ProjectService(
             }
             // Initialize students collection if course is not null
             .also { it.students.size }
-        }
-        
-        val requester = userRepository.findById(requesterId).orElseThrow {
-            NotFoundException("User with id $requesterId not found")
-        }
-
-        if (!team.isMember(requester)) {
-            throw IllegalArgumentException("Only team members can create projects")
-        }
-
+        }        // Removed team membership restriction - anyone can now create projects for any team
         // Only validate course enrollment if a course is specified
         if (course != null) {
             val teamMemberIds = team.members.map { it.id }
@@ -90,32 +81,29 @@ class ProjectService(
                 throw IllegalArgumentException("Team is not enrolled in this course")
             }
         }
-          val project = Project(
+        val project = Project(
             title = projectData.title,
             description = projectData.description,
             objectives = projectData.objectives,
+            githubUrl = projectData.githubUrl,
             team = team,
             course = course
         )
         return projectRepository.save(project)
     }    fun updateProject(projectId: UUID, updateData: UpdateProjectRequest, requesterId: UUID): Project {
         val project = getProjectById(projectId)
-        val requester = userRepository.findById(requesterId).orElseThrow {
-            NotFoundException("User with id $requesterId not found")
-        }
-
+        
         // Initialize team members to prevent LazyInitializationException
         project.team.members.size
 
-        if (!project.team.isMember(requester)) {
-            throw IllegalArgumentException("Only team members can update projects")
-        }
+        // Removed team membership restriction - anyone can now update projects
         if (project.status !in listOf(ProjectStatus.PROPOSED, ProjectStatus.REJECTED)) {
             throw IllegalArgumentException("Project cannot be edited in current status: ${project.status}")
         }
         updateData.title?.let { project.title = it }
         updateData.description?.let { project.description = it }
         updateData.objectives?.let { project.objectives = it }
+        updateData.githubUrl?.let { project.githubUrl = it }
 
         project.updatedAt = Timestamp.from(Instant.now())
         
@@ -403,8 +391,7 @@ class ProjectService(
                 total_pages = projectsPage.totalPages,
                 total_count = projectsPage.totalElements.toInt()
             )
-        )
-    }private fun getProjectById(projectId: UUID): Project {
+        )    }fun getProjectById(projectId: UUID): Project {
         val project = projectRepository.findById(projectId).orElseThrow {
             NotFoundException("Project with id $projectId not found")
         }

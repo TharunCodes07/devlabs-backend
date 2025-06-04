@@ -15,7 +15,7 @@ class Review(
     @GeneratedValue(strategy = GenerationType.AUTO)    val id: UUID? = null,
     var title: String,
     var description: String? = null,
-    
+
     // Exam-like scheduling with start and end dates
     var startDate: Timestamp? = null,
     var endDate: Timestamp? = null,
@@ -29,7 +29,6 @@ class Review(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewer_id")
     var reviewer: User,
-      // Rubric for evaluation
     @OneToOne(mappedBy = "review", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
     var rubric: Rubric? = null,
     
@@ -81,20 +80,7 @@ class Review(
             else -> false
         }
     }
-    
-    // Helper method to check if review has ended
-    fun hasEnded(): Boolean {
-        val now = Timestamp.from(Instant.now())
-        return endDate?.before(now) == true
-    }
-    
-    // Helper method to check if review hasn't started yet
-    fun hasNotStarted(): Boolean {
-        val now = Timestamp.from(Instant.now())
-        return startDate?.after(now) == true
-    }
 
-    // Helper method to calculate percentage score
     fun calculatePercentageScore(): Double? {
         return if (totalScore != null && maxPossibleScore != null && maxPossibleScore!! > 0) {
             (totalScore!! / maxPossibleScore!!) * 100

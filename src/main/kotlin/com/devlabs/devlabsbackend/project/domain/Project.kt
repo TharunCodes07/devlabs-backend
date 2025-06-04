@@ -25,20 +25,20 @@ class Project(
     var title: String,
       @Column(columnDefinition = "TEXT")
     var description: String,
-    
-    @Column(columnDefinition = "TEXT")
+      @Column(columnDefinition = "TEXT")
     var objectives: String? = null,
     
-    var status: ProjectStatus = ProjectStatus.PROPOSED,    @ManyToOne(fetch = FetchType.LAZY)
+    var githubUrl: String? = null,
+    
+    var status: ProjectStatus = ProjectStatus.PROPOSED,@ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "team_id")
     var team: Team,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id", nullable = true)
-    var course: Course? = null,
-
-    @OneToMany(mappedBy = "project", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+    var course: Course? = null,    @OneToMany(mappedBy = "project", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
     var reviews: MutableSet<Review> = mutableSetOf(),
+    
     val createdAt: Timestamp = Timestamp.from(Instant.now()),
     var updatedAt: Timestamp = Timestamp.from(Instant.now())
 )

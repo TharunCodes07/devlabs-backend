@@ -10,6 +10,7 @@ data class CreateProjectRequest(
     val title: String,
     val description: String,
     val objectives: String? = null,
+    val githubUrl: String? = null,
     val teamId: UUID,
     
     @JsonSetter(nulls = Nulls.SKIP)
@@ -19,5 +20,6 @@ data class CreateProjectRequest(
 data class UpdateProjectRequest(
     val title: String? = null,
     val description: String? = null,
-    val objectives: String? = null
+    val objectives: String? = null,
+    val githubUrl: String? = null
 )
