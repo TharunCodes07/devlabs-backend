@@ -1,6 +1,7 @@
 package com.devlabs.devlabsbackend.course.domain
 
 import com.devlabs.devlabsbackend.batch.domain.Batch
+import com.devlabs.devlabsbackend.review.domain.Review
 import com.devlabs.devlabsbackend.semester.domain.Semester
 import com.devlabs.devlabsbackend.user.domain.User
 import jakarta.persistence.*
@@ -32,5 +33,9 @@ class Course(
     var instructors: MutableSet<User> = mutableSetOf(),
 
     @OneToMany(fetch = FetchType.LAZY)
-    var batches: MutableSet<Batch> = mutableSetOf()
+    var batches: MutableSet<Batch> = mutableSetOf(),
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="review_id")
+    var review: Review,
 )

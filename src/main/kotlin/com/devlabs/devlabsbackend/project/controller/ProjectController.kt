@@ -2,6 +2,7 @@ package com.devlabs.devlabsbackend.project.controller
 
 import com.devlabs.devlabsbackend.project.domain.DTO.CreateProjectRequest
 import com.devlabs.devlabsbackend.project.domain.DTO.UpdateProjectRequest
+import com.devlabs.devlabsbackend.project.domain.DTO.toProjectResponse
 import com.devlabs.devlabsbackend.project.service.ProjectService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -87,6 +88,17 @@ class ProjectController(
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(mapOf("error" to "Failed to complete project"))
+        }
+    }
+
+    @GetMapping("/{projectId}")
+    fun getProjectById(@PathVariable projectId: UUID): ResponseEntity<Any> {
+        return try {
+            val project = projectService.getProjectById(projectId)
+            ResponseEntity.ok(project.toProjectResponse())
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to get project"))
         }
     }
 
