@@ -13,10 +13,9 @@ import java.util.*
 @RequestMapping("/projects")
 class ProjectController(
     private val projectService: ProjectService
-) {    @PostMapping
-    fun createProject(
-        @RequestBody request: CreateProjectRequest
-    ): ResponseEntity<Any> {
+) {
+    @PostMapping
+    fun createProject(@RequestBody request: CreateProjectRequest): ResponseEntity<Any> {
         return try {
             val project = projectService.createProject(request)
             ResponseEntity.status(HttpStatus.CREATED).body(project)

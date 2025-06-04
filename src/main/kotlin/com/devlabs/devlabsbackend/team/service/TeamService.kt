@@ -67,7 +67,9 @@ class TeamService(
             }
         }
         return teamRepository.save(team)
-    }    fun getAllTeams(page: Int = 0, size: Int = 10): PaginatedResponse<TeamResponse> {
+    }
+
+    fun getAllTeams(page: Int = 0, size: Int = 10): PaginatedResponse<TeamResponse> {
         val pageable: Pageable = PageRequest.of(page, size)
         val teamsPage: Page<Team> = teamRepository.findAllWithMembersAndProjects(pageable)
         

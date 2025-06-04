@@ -30,6 +30,4 @@ class Team(
 
     val createdAt: Timestamp = Timestamp.from(Instant.now()),
     var updatedAt: Timestamp = Timestamp.from(Instant.now())
-) {
-    fun isMember(user: User): Boolean = members.any { it.id == user.id }
-}
+)

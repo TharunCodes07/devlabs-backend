@@ -36,7 +36,9 @@ class Project(
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id", nullable = true)
-    var course: Course? = null,    @OneToMany(mappedBy = "project", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+    var course: Course? = null,
+
+    @OneToMany(mappedBy = "project", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
     var reviews: MutableSet<Review> = mutableSetOf(),
     
     val createdAt: Timestamp = Timestamp.from(Instant.now()),

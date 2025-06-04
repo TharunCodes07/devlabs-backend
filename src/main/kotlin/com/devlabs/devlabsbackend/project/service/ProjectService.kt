@@ -12,7 +12,6 @@ import com.devlabs.devlabsbackend.project.repository.ProjectRepository
 import com.devlabs.devlabsbackend.team.repository.TeamRepository
 import com.devlabs.devlabsbackend.user.repository.UserRepository
 import jakarta.transaction.Transactional
-import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
@@ -27,20 +26,17 @@ class ProjectService(
     private val teamRepository: TeamRepository,
     private val courseRepository: CourseRepository,
     private val userRepository: UserRepository
-){    fun createProject(projectData: CreateProjectRequest): Project {
+){
+    fun createProject(projectData: CreateProjectRequest): Project {
         try {
             val team = teamRepository.findById(projectData.teamId).orElseThrow {
                 NotFoundException("Team with id ${projectData.teamId} not found")
             }
-            // Initialize members collection to avoid LazyInitializationException
             team.members.size
-              // Course is optional now
             val course = projectData.courseId?.let {
                 courseRepository.findById(it).orElseThrow {
                     NotFoundException("Course with id ${projectData.courseId} not found")
-                }
-                // Initialize students collection if course is not null
-                .also { it.students.size }
+                }.also { it.students.size }
             }
 
             val project = Project(
@@ -57,42 +53,10 @@ class ProjectService(
             e.printStackTrace()
             throw e
         }
-    }    fun createProjectWithUserValidation(projectData: CreateProjectRequest, requesterId: UUID): Project {
-        val team = teamRepository.findById(projectData.teamId).orElseThrow {
-            NotFoundException("Team with id ${projectData.teamId} not found")
-        }
-        
-        // Initialize members collection to avoid LazyInitializationException
-        team.members.size
-        
-        // Handle nullable courseId
-        val course = projectData.courseId?.let {
-            courseRepository.findById(it).orElseThrow {
-                NotFoundException("Course with id ${projectData.courseId} not found")
-            }
-            // Initialize students collection if course is not null
-            .also { it.students.size }
-        }        // Removed team membership restriction - anyone can now create projects for any team
-        // Only validate course enrollment if a course is specified
-        if (course != null) {
-            val teamMemberIds = team.members.map { it.id }
-            val enrolledStudents = course.students.map { it.id }
-            if (!teamMemberIds.any { it in enrolledStudents }) {
-                throw IllegalArgumentException("Team is not enrolled in this course")
-            }
-        }
-        val project = Project(
-            title = projectData.title,
-            description = projectData.description,
-            objectives = projectData.objectives,
-            githubUrl = projectData.githubUrl,
-            team = team,
-            course = course
-        )
-        return projectRepository.save(project)
-    }    fun updateProject(projectId: UUID, updateData: UpdateProjectRequest, requesterId: UUID): Project {
+    }
+    fun updateProject(projectId: UUID, updateData: UpdateProjectRequest, requesterId: UUID): Project {
         val project = getProjectById(projectId)
-        
+
         // Initialize team members to prevent LazyInitializationException
         project.team.members.size
 
@@ -106,24 +70,22 @@ class ProjectService(
         updateData.githubUrl?.let { project.githubUrl = it }
 
         project.updatedAt = Timestamp.from(Instant.now())
-        
+
         // Initialize course data if present
-        project.course?.let { 
-            it.students.size 
+        project.course?.let {
+            it.students.size
             it.instructors.size
         }
-        
+
         return projectRepository.save(project)
-    }fun approveProject(projectId: UUID, instructorId: UUID): Project {
+    }
+    fun approveProject(projectId: UUID, instructorId: UUID): Project {
         val project = getProjectById(projectId)
         val instructor = userRepository.findById(instructorId).orElseThrow {
             NotFoundException("User with id $instructorId not found")
         }
-        
-        // If course is null, skip instructor validation
         val course = project.course
         if (course != null) {
-            // Initialize instructors collection to avoid LazyInitializationException
             course.instructors.size
             if (!course.instructors.contains(instructor)) {
                 throw IllegalArgumentException("Only course instructors can approve projects")
@@ -133,8 +95,7 @@ class ProjectService(
         if (project.status != ProjectStatus.PROPOSED) {
             throw IllegalArgumentException("Project cannot be approved in current status: ${project.status}")
         }
-        
-        // Automatically start the project when approved
+
         project.status = ProjectStatus.ONGOING
         project.updatedAt = Timestamp.from(Instant.now())
         return projectRepository.save(project)
