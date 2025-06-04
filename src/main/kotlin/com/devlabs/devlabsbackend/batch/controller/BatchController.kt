@@ -1,8 +1,10 @@
 package com.devlabs.devlabsbackend.batch.controller
 
 import com.devlabs.devlabsbackend.batch.domain.dto.BatchResponse
+import com.devlabs.devlabsbackend.batch.domain.dto.SemesterBatchResponse
 import com.devlabs.devlabsbackend.batch.service.BatchService
 import com.devlabs.devlabsbackend.semester.domain.DTO.SemesterResponse
+import com.devlabs.devlabsbackend.semester.domain.Semester
 import org.apache.coyote.Response
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -56,4 +58,22 @@ class BatchController(
             batchService.searchBatches(query)
         )
     }
+
+    @GetMapping("/{batchId}/active-semester")
+    fun getActiveSemester(@PathVariable batchId: UUID): ResponseEntity<SemesterBatchResponse> {
+        val semester = batchService.getActiveSemester(batchId)
+        if( semester == null) {
+            return ResponseEntity.notFound().build()
+        }
+        return ResponseEntity.ok(semester.toSemesterBatchResponse())
+    }
+}
+
+fun Semester.toSemesterBatchResponse(): SemesterBatchResponse {
+    return SemesterBatchResponse(
+        id = this.id.toString(),
+        name = this.name,
+        year = this.year.toString(),
+        isActive = this.isActive
+    )
 }

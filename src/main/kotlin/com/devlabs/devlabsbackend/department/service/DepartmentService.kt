@@ -2,6 +2,7 @@ package com.devlabs.devlabsbackend.department.service
 
 import com.devlabs.devlabsbackend.batch.domain.Batch
 import com.devlabs.devlabsbackend.department.domain.Department
+import com.devlabs.devlabsbackend.department.domain.dto.DepartmentBatchResponse
 import com.devlabs.devlabsbackend.department.repository.DepartmentRepository
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
@@ -28,4 +29,9 @@ class DepartmentService(
     fun getBatches(department: Department): MutableSet<Batch>{
         return department.batches
     }
+
+    fun getBatchesByDepartmentId(departmentId: UUID): List<DepartmentBatchResponse> {
+        return departmentRepository.findBatchesByDepartmentId(departmentId)
+    }
 }
+

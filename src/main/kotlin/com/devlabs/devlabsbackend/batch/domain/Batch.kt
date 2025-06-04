@@ -14,7 +14,7 @@ class Batch (
     @GeneratedValue(strategy = GenerationType.AUTO)
     val id : UUID? = null,
     val name: String,
-    val batch: Year,
+    val graduationYear: Year,
     val section: String,
     val isActive: Boolean,
 

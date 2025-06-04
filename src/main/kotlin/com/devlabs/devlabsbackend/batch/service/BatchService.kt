@@ -4,6 +4,7 @@ import com.devlabs.devlabsbackend.batch.domain.Batch
 import com.devlabs.devlabsbackend.batch.domain.dto.BatchResponse
 import com.devlabs.devlabsbackend.batch.repository.BatchRepository
 import com.devlabs.devlabsbackend.core.exception.NotFoundException
+import com.devlabs.devlabsbackend.semester.domain.Semester
 import com.devlabs.devlabsbackend.semester.repository.SemesterRepository
 import com.devlabs.devlabsbackend.user.repository.UserRepository
 import org.springframework.stereotype.Service
@@ -81,15 +82,22 @@ class BatchService(
             batch -> batch.toBatchResponse()
         }
     }
+
+    fun getActiveSemester(batchId: UUID): Semester? {
+        val batch = batchRepository.findById(batchId).orElseThrow {
+            NotFoundException("Could not find batch with id $batchId")
+        }
+        return batch.semester.find{ it.isActive }
+    }
 }
 
 fun Batch.toBatchResponse(): BatchResponse {
     return BatchResponse(
         id = this.id,
         name = this.name,
-        batch = this.batch,
+        graduationYear = this.graduationYear,
         section = this.section,
-        isActive = this.isActive,
+        isActive = this.isActive
     )
 }
 

@@ -10,6 +10,6 @@ import java.util.*
 @RepositoryRestResource(path = "batch")
 interface BatchRepository : JpaRepository<Batch, UUID>{
 
-    @Query("SELECT b FROM Batch b WHERE LOWER(b.name) LIKE LOWER(CONCAT('%', :query, '%')) OR CAST(b.batch AS string) LIKE CONCAT('%', :query, '%')")
+    @Query("SELECT b FROM Batch b WHERE LOWER(b.name) LIKE LOWER(CONCAT('%', :query, '%')) OR CAST(b.graduationYear AS string) LIKE CONCAT('%', :query, '%')")
     fun findByNameOrYearContainingIgnoreCase(query: String): List<Batch>
 }

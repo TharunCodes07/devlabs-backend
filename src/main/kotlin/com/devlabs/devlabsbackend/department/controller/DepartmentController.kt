@@ -2,6 +2,7 @@ package com.devlabs.devlabsbackend.department.controller
 
 import com.devlabs.devlabsbackend.batch.domain.Batch
 import com.devlabs.devlabsbackend.department.domain.Department
+import com.devlabs.devlabsbackend.department.domain.dto.DepartmentBatchResponse
 import com.devlabs.devlabsbackend.department.domain.dto.DepartmentResponse
 import com.devlabs.devlabsbackend.department.repository.DepartmentRepository
 import com.devlabs.devlabsbackend.department.service.DepartmentService
@@ -31,12 +32,8 @@ class DepartmentController(
     }
 
     @GetMapping("{departmentId}/batches")
-    fun getBatches(@PathVariable("departmentId") departmentId: UUID): MutableSet<Batch>{
-        val department = departmentService.findDepartmentById(departmentId)
-        if (department == null){
-            return mutableSetOf()
-        }
-        return departmentService.getBatches(department)
+    fun getBatches(@PathVariable("departmentId") departmentId: UUID): List<DepartmentBatchResponse> {
+        return departmentService.getBatchesByDepartmentId(departmentId)
     }
 }
 
@@ -44,5 +41,14 @@ fun Department.toDepartmentResponse(): DepartmentResponse {
     return DepartmentResponse(
         id = this.id,
         name = this.name,
+    )
+}
+
+fun Batch.toDepartmentBatchResponse(): DepartmentBatchResponse {
+    return DepartmentBatchResponse(
+        id = this.id,
+        name = this.name,
+        graduationYear = this.graduationYear,
+        section = this.section,
     )
 }
