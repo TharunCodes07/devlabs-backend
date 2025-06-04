@@ -88,7 +88,6 @@ fun Batch.toBatchResponse(): BatchResponse {
         id = this.id,
         name = this.name,
         batch = this.batch,
-        department = this.department,
         section = this.section,
         isActive = this.isActive,
     )

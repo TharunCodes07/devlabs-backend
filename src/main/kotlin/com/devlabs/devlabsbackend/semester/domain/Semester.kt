@@ -1,5 +1,6 @@
 package com.devlabs.devlabsbackend.semester.domain
 
+import com.devlabs.devlabsbackend.batch.domain.Batch
 import com.devlabs.devlabsbackend.course.domain.Course
 import com.devlabs.devlabsbackend.user.domain.User
 import jakarta.persistence.*
@@ -27,4 +28,7 @@ class Semester(
     )
     var managers: MutableList<User> = mutableListOf(),
 
+    @ManyToOne
+    @JoinColumn(name = "batch_id")
+    var batch: Batch? = null,
     )
