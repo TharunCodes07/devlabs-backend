@@ -8,6 +8,7 @@ import com.devlabs.devlabsbackend.semester.domain.Semester
 import com.devlabs.devlabsbackend.semester.repository.SemesterRepository
 import com.devlabs.devlabsbackend.user.repository.UserRepository
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.time.Year
 import java.util.*
 
@@ -83,11 +84,12 @@ class BatchService(
         }
     }
 
+    @Transactional(readOnly = true)
     fun getActiveSemester(batchId: UUID): Semester? {
         val batch = batchRepository.findById(batchId).orElseThrow {
             NotFoundException("Could not find batch with id $batchId")
         }
-        return batch.semester.find{ it.isActive }
+        return batch.semester.find { it.isActive }
     }
 }
 
