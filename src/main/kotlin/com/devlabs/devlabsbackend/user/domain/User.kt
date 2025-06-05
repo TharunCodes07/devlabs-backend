@@ -27,5 +27,4 @@ class User (
     var phoneNumber: String,
     var isActive: Boolean = true,
     var createdAt: Timestamp = Timestamp.from(Instant.now()),
-    var lastPasswordChange: Timestamp? = null
 )

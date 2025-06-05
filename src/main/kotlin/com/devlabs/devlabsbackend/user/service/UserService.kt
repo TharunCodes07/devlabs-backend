@@ -1,14 +1,23 @@
 package com.devlabs.devlabsbackend.user.service
 
-import com.devlabs.devlabsbackend.user.domain.User
-import com.devlabs.devlabsbackend.user.domain.Role
+import com.devlabs.devlabsbackend.core.exception.NotFoundException
+import com.devlabs.devlabsbackend.user.domain.DTO.CreateUserRequest
+import com.devlabs.devlabsbackend.user.domain.DTO.UpdateUserRequest
 import com.devlabs.devlabsbackend.user.domain.DTO.UserResponse
+
+import com.devlabs.devlabsbackend.user.domain.Role
+import com.devlabs.devlabsbackend.user.domain.User
 import com.devlabs.devlabsbackend.user.repository.UserRepository
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
+import java.sql.Timestamp
+import java.time.Instant
+import java.util.*
 
 @Service
 class UserService(
     private val userRepository: UserRepository,
+    private val passwordEncoder: PasswordEncoder
 ){
     fun getAllUsers(): List<UserResponse>{
         return userRepository.findAll().map { user -> user.toUserResponse() }
@@ -22,6 +31,64 @@ class UserService(
         return userRepository.findByRole(role).map { user -> user.toUserResponse() }
     }
 
+    fun createUser(request: CreateUserRequest): UserResponse {
+        // Check if user already exists
+        if (userRepository.existsByEmail(request.email)) {
+            throw IllegalArgumentException("Email already exists")
+        }
+
+        try {
+            val user = User(
+                name = request.name,
+                email = request.email,
+                password = passwordEncoder.encode(request.password),
+                role = Role.valueOf(request.role.uppercase()),
+                phoneNumber = request.phoneNumber,
+                isActive = request.isActive,
+                createdAt = Timestamp.from(Instant.now())
+            )
+
+            val savedUser = userRepository.save(user)
+            return savedUser.toUserResponse()
+        } catch (e: IllegalArgumentException) {
+            throw IllegalArgumentException("Invalid role: ${request.role}")
+        } catch (e: Exception) {
+            throw RuntimeException("Failed to create user: ${e.message}")
+        }
+    }
+
+    fun updateUser(userId: UUID, request: UpdateUserRequest): UserResponse {
+        val user = userRepository.findById(userId).orElseThrow {
+            NotFoundException("User with id $userId not found")
+        }
+
+        // Check if email is being changed and if it's already taken by another user
+        if (request.email != user.email && userRepository.existsByEmail(request.email)) {
+            throw IllegalArgumentException("Email already exists")
+        }
+
+        try {
+            user.name = request.name
+            user.email = request.email
+            user.phoneNumber = request.phoneNumber
+            user.role = Role.valueOf(request.role.uppercase())
+            user.isActive = request.isActive
+
+            val updatedUser = userRepository.save(user)
+            return updatedUser.toUserResponse()
+        } catch (e: IllegalArgumentException) {
+            throw IllegalArgumentException("Invalid role: ${request.role}")
+        } catch (e: Exception) {
+            throw RuntimeException("Failed to update user: ${e.message}")
+        }
+    }    fun deleteUser(userId: UUID) {
+        val user = userRepository.findById(userId).orElseThrow {
+            NotFoundException("User with id $userId not found")
+        }
+        userRepository.delete(user)
+    }
+
+    // Legacy method for backwards compatibility
     fun createUser(user: User): User{
         return userRepository.save(user)
     }
@@ -34,14 +101,14 @@ class UserService(
 // Extension function to convert User to UserResponse
 fun User.toUserResponse(): UserResponse {
     return UserResponse(
-        id = this.id,
+        id = this.id?.toString(),
         name = this.name,
         email = this.email,
         profileId = this.profileId,
         image = this.image,
-        role = this.role,
+        role = this.role.name,
         phoneNumber = this.phoneNumber,
         isActive = this.isActive,
-        createdAt = this.createdAt
+        createdAt = this.createdAt.toString()
     )
 }

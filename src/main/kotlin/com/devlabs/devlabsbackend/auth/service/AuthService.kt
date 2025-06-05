@@ -96,7 +96,6 @@ class AuthService(
 
         try {
             user.password = passwordEncoder.encode(request.newPassword)
-            user.lastPasswordChange = Timestamp.from(Instant.now())
             userRepository.save(user)
 
             return AuthResponse(true, "Password changed successfully")
