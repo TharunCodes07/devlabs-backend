@@ -38,12 +38,12 @@ class ProjectService(
                     NotFoundException("Course with id ${projectData.courseId} not found")
                 }.also { it.students.size }
             }
-
             val project = Project(
                 title = projectData.title,
                 description = projectData.description,
                 objectives = projectData.objectives,
                 githubUrl = projectData.githubUrl,
+                status = if (course != null) ProjectStatus.ONGOING else ProjectStatus.PROPOSED,
                 team = team,
                 course = course
             )
@@ -79,6 +79,44 @@ class ProjectService(
 
         return projectRepository.save(project)
     }
+
+    fun updateProjectCourse(projectId: UUID, courseId: UUID?, requesterId: UUID): Project {
+        val project = getProjectById(projectId)
+        
+        // Initialize team members to prevent LazyInitializationException
+        project.team.members.size
+        
+        // Check if user has permission to update the project
+        val user = userRepository.findById(requesterId).orElseThrow {
+            NotFoundException("User with id $requesterId not found")
+        }
+        
+        if (project.status !in listOf(ProjectStatus.PROPOSED, ProjectStatus.REJECTED)) {
+            throw IllegalArgumentException("Project course cannot be updated in current status: ${project.status}")
+        }
+        
+        // Update course
+        val course = courseId?.let {
+            courseRepository.findById(it).orElseThrow {
+                NotFoundException("Course with id $courseId not found")
+            }.also { it.students.size }
+        }
+        
+        project.course = course
+        
+        // Set status based on course presence
+        if (course != null) {
+            project.status = ProjectStatus.ONGOING
+        } else if (project.status == ProjectStatus.ONGOING) {
+            // Only change status if it's currently ONGOING
+            project.status = ProjectStatus.PROPOSED
+        }
+        
+        project.updatedAt = Timestamp.from(Instant.now())
+        
+        return projectRepository.save(project)
+    }
+    
     fun approveProject(projectId: UUID, instructorId: UUID): Project {
         val project = getProjectById(projectId)
         val instructor = userRepository.findById(instructorId).orElseThrow {
@@ -367,5 +405,53 @@ class ProjectService(
         project.reviews.size
         
         return project
+    }
+    
+    fun getAllProjectsByTeam(teamId: UUID): List<ProjectResponse> {
+        val team = teamRepository.findById(teamId).orElseThrow {
+            NotFoundException("Team with id $teamId not found")
+        }
+        
+        // Initialize members collection to avoid LazyInitializationException
+        team.members.size
+        
+        val projects = projectRepository.findByTeam(team)
+        
+        // Initialize each project's related collections
+        projects.forEach { project ->
+            project.course?.let { 
+                it.students.size
+                it.instructors.size
+            }
+            // Ensure team is properly initialized for each project
+            project.team.members.size
+            // Initialize reviews collection to avoid LazyInitializationException
+            project.reviews.size
+        }
+        
+        return projects.map { it.toProjectResponse() }
+    }
+    
+    fun deleteProject(projectId: UUID, userId: UUID): Boolean {
+        val project = projectRepository.findById(projectId).orElseThrow {
+            NotFoundException("Project with id $projectId not found")
+        }
+        
+        // Verify user has permission to delete the project
+        // You might want to add additional permission checks here based on your business logic
+        val user = userRepository.findById(userId).orElseThrow {
+            NotFoundException("User with id $userId not found")
+        }
+        
+        // Check if user is part of the team or an instructor of the course
+        val isTeamMember = project.team.members.any { it.id == userId }
+        val isCourseInstructor = project.course?.instructors?.any { it.id == userId } ?: false
+        
+        if (!isTeamMember && !isCourseInstructor) {
+            throw IllegalArgumentException("You don't have permission to delete this project")
+        }
+        
+        projectRepository.delete(project)
+        return true
     }
 }

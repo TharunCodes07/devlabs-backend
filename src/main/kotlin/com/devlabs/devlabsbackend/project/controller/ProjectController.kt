@@ -13,12 +13,11 @@ import java.util.*
 @RequestMapping("/projects")
 class ProjectController(
     private val projectService: ProjectService
-) {
-    @PostMapping
+) {    @PostMapping
     fun createProject(@RequestBody request: CreateProjectRequest): ResponseEntity<Any> {
         return try {
             val project = projectService.createProject(request)
-            ResponseEntity.status(HttpStatus.CREATED).body(project)
+            ResponseEntity.status(HttpStatus.CREATED).body(project.toProjectResponse())
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf("error" to e.message))
         } catch (e: Exception) {
@@ -32,15 +31,31 @@ class ProjectController(
         @PathVariable projectId: UUID,
         @RequestBody request: UpdateProjectRequest,
         @RequestHeader("X-User-Id") userId: UUID
-    ): ResponseEntity<Any> {
-        return try {
+    ): ResponseEntity<Any> {        return try {
             val project = projectService.updateProject(projectId, request, userId)
-            ResponseEntity.ok(project)
+            ResponseEntity.ok(project.toProjectResponse())
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf("error" to e.message))
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(mapOf("error" to "Failed to update project"))        }
+                .body(mapOf("error" to "Failed to update project"))        
+        }
+    }
+
+    @PutMapping("/{projectId}/course")
+    fun updateProjectCourse(
+        @PathVariable projectId: UUID,
+        @RequestBody courseId: UUID?,
+        @RequestHeader("X-User-Id") userId: UUID
+    ): ResponseEntity<Any> {        return try {
+            val project = projectService.updateProjectCourse(projectId, courseId, userId)
+            ResponseEntity.ok(project.toProjectResponse())
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to update project course"))
+        }
     }
 
     @PutMapping("/{projectId}/approve")
@@ -124,6 +139,8 @@ class ProjectController(
                 .body(mapOf("error" to "Failed to get projects"))
         }
     }
+
+
 
     @GetMapping("/course/{courseId}")
     fun getProjectsByCourse(
@@ -209,6 +226,35 @@ class ProjectController(
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(mapOf("error" to "Failed to get ongoing projects"))
+        }
+    }
+    
+    @GetMapping("/team/{teamId}/all")
+    fun getAllProjectsByTeam(@PathVariable teamId: UUID): ResponseEntity<Any> {
+        return try {
+            val projects = projectService.getAllProjectsByTeam(teamId)
+            ResponseEntity.ok(projects)
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to get all projects for team"))
+        }
+    }
+
+    @DeleteMapping("/{projectId}")
+    fun deleteProject(
+        @PathVariable projectId: UUID,
+        @RequestHeader("X-User-Id") userId: UUID
+    ): ResponseEntity<Any> {
+        return try {
+            val result = projectService.deleteProject(projectId, userId)
+            ResponseEntity.ok(mapOf("success" to true, "message" to "Project deleted successfully"))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to delete project"))
         }
     }
 }

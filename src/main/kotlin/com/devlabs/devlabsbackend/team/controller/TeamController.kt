@@ -49,9 +49,7 @@ class TeamController(
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(mapOf("error" to "Failed to get teams"))
         }
-    }
-
-    @GetMapping("/search")
+    }    @GetMapping("/search")
     fun searchTeams(@RequestParam query: String, @RequestParam(defaultValue = "0") page: Int, @RequestParam(defaultValue = "10") size: Int): ResponseEntity<Any> {
         return try {
             val teams = teamService.searchTeams(query, page, size)
@@ -61,4 +59,58 @@ class TeamController(
                 .body(mapOf("error" to "Failed to search teams"))
         }
     }
+    
+    @GetMapping("/{teamId}")
+    fun getTeamById(@PathVariable teamId: UUID): ResponseEntity<Any> {
+        return try {
+            val team = teamService.getTeamById(teamId)
+            ResponseEntity.ok(team.toTeamResponse())
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to get team"))
+        }
+    }    @PutMapping("/{teamId}")
+    fun updateTeam(
+        @PathVariable teamId: UUID,
+        @RequestBody request: com.devlabs.devlabsbackend.team.domain.DTO.UpdateTeamRequest
+    ): ResponseEntity<Any> {
+        return try {
+            val team = teamService.updateTeam(teamId, request)
+            ResponseEntity.ok(team.toTeamResponse())
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to update team"))
+        }
+    }
+    
+    @GetMapping("/students/search")
+    fun searchStudents(@RequestParam query: String): ResponseEntity<Any> {
+        return try {
+            val students = teamService.searchStudents(query)
+            ResponseEntity.ok(students)
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to search students"))
+        }
+    }
+}
+
+private fun com.devlabs.devlabsbackend.team.domain.Team.toTeamResponse(): com.devlabs.devlabsbackend.team.domain.DTO.TeamResponse {
+    return com.devlabs.devlabsbackend.team.domain.DTO.TeamResponse(
+        id = this.id,
+        name = this.name,
+        description = this.description,
+        members = this.members,
+        projectCount = this.projects.size,
+        createdAt = this.createdAt,
+        updatedAt = this.updatedAt
+    )
 }

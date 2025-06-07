@@ -7,6 +7,7 @@ import com.devlabs.devlabsbackend.team.domain.Team
 import com.devlabs.devlabsbackend.team.repository.TeamRepository
 import com.devlabs.devlabsbackend.user.domain.Role
 import com.devlabs.devlabsbackend.user.repository.UserRepository
+import com.devlabs.devlabsbackend.user.service.toUserResponse
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
@@ -38,10 +39,6 @@ class TeamService(
             NotFoundException("User with id $creatorId not found")
         }
 
-        if (creator.role != Role.STUDENT) {
-            throw IllegalArgumentException("Only students can create teams")
-        }
-        
         val team = Team(
             name = teamData.name,
             description = teamData.description
@@ -72,7 +69,7 @@ class TeamService(
     fun getAllTeams(page: Int = 0, size: Int = 10): PaginatedResponse<TeamResponse> {
         val pageable: Pageable = PageRequest.of(page, size)
         val teamsPage: Page<Team> = teamRepository.findAllWithMembersAndProjects(pageable)
-        
+
         return PaginatedResponse(
             data = teamsPage.content.map { team -> team.toTeamResponse() },
             pagination = PaginationInfo(
@@ -90,7 +87,7 @@ class TeamService(
         }
         val pageable: Pageable = PageRequest.of(page, size)
         val teamsPage: Page<Team> = teamRepository.findByMemberWithProjects(user, pageable)
-        
+
         return PaginatedResponse(
             data = teamsPage.content.map { team -> team.toTeamResponse() },
             pagination = PaginationInfo(
@@ -105,7 +102,7 @@ class TeamService(
     fun searchTeams(query: String, page: Int = 0, size: Int = 10): PaginatedResponse<TeamResponse> {
         val pageable: Pageable = PageRequest.of(page, size)
         val teamsPage: Page<Team> = teamRepository.findByNameContainingIgnoreCaseWithProjects(query, pageable)
-        
+
         return PaginatedResponse(
             data = teamsPage.content.map { team -> team.toTeamResponse() },
             pagination = PaginationInfo(
@@ -117,15 +114,65 @@ class TeamService(
         )
     }
 
-    private fun Team.toTeamResponse(): TeamResponse {
-        return TeamResponse(
-            id = this.id,
-            name = this.name,
-            description = this.description,
-            members = this.members,
-            projectCount = this.projects.size,
-            createdAt = this.createdAt,
-            updatedAt = this.updatedAt
-        )
+    fun getTeamById(teamId: UUID): Team {
+        val team = teamRepository.findById(teamId).orElseThrow {
+            NotFoundException("Team with id $teamId not found")
+        }
+
+        // Initialize members and projects to avoid LazyInitializationException
+        team.members.size
+        team.projects.size
+
+        return team
     }
+
+    fun updateTeam(teamId: UUID, updateData: com.devlabs.devlabsbackend.team.domain.DTO.UpdateTeamRequest): Team {
+        val team = getTeamById(teamId)
+
+        updateData.name?.let { team.name = it }
+        updateData.description?.let { team.description = it }
+
+        if (updateData.memberIds != null) {
+            val newMembers = userRepository.findAllById(updateData.memberIds)
+
+            if (newMembers.size != updateData.memberIds.size) {
+                throw NotFoundException("Some member IDs could not be found")
+            }
+
+            val nonStudents = newMembers.filter { it.role != Role.STUDENT }
+            if (nonStudents.isNotEmpty()) {
+                throw IllegalArgumentException("Only students can be team members")
+            }
+
+            // Update members
+            team.members.clear()
+            team.members.addAll(newMembers)
+        }
+
+        team.updatedAt = java.sql.Timestamp(java.time.Instant.now().toEpochMilli())
+
+        return teamRepository.save(team)
+    }
+
+    fun searchStudents(query: String): List<com.devlabs.devlabsbackend.user.domain.DTO.UserResponse> {
+        // Use the non-paginated method from UserRepository
+        val students = userRepository.findByNameOrEmailContainingIgnoreCase(query)
+            .filter { it.role == Role.STUDENT } // Filter to keep only students
+
+        // Convert to UserResponse objects
+        return students.map { it.toUserResponse() }
+    }
+}
+
+// Extension function to convert Team to TeamResponse
+fun Team.toTeamResponse(): TeamResponse {
+    return TeamResponse(
+        id = this.id,
+        name = this.name,
+        description = this.description,
+        members = this.members,
+        projectCount = this.projects.size,
+        createdAt = this.createdAt,
+        updatedAt = this.updatedAt
+    )
 }

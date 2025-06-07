@@ -11,6 +11,12 @@ data class CreateTeamRequest(
     val creatorId: UUID
 )
 
+data class UpdateTeamRequest(
+    val name: String? = null,
+    val description: String? = null,
+    val memberIds: List<UUID>? = null
+)
+
 data class TeamResponse(
     val id: UUID?,
     val name: String,

@@ -19,6 +19,7 @@ class Course(
     @GeneratedValue(strategy = GenerationType.AUTO)
     val id: UUID? = null,
     var name: String,
+    var code: String = "",
     var description: String,
     var type: CourseType,
 

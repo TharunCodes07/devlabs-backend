@@ -13,22 +13,21 @@ class Batch (
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     val id : UUID? = null,
-    val name: String,
-    val graduationYear: Year,
-    val section: String,
-    val isActive: Boolean,
+    var name: String,
+    var graduationYear: Year,
+    var section: String,
+    var isActive: Boolean,
 
     @OneToMany(fetch = FetchType.LAZY)
     val students: MutableSet<User> = mutableSetOf(),
 
     @ManyToMany(fetch = FetchType.LAZY)
     val managers: MutableSet<User> = mutableSetOf(),
-
     @OneToMany(fetch = FetchType.LAZY, cascade =  [CascadeType.ALL])
     val semester: MutableSet<Semester> = mutableSetOf(),
 
     @ManyToOne
     @JoinColumn(name = "department_id")
-    val department: Department? = null,
+    var department: Department? = null,
 
     )

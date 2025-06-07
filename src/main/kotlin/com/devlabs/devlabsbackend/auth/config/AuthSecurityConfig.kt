@@ -52,8 +52,7 @@ class AuthSecurityConfig(
             .csrf { it.disable() }
             .cors { it.configurationSource(corsConfigurationSource()) }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
-            .authorizeHttpRequests { auth ->
-                auth                    .requestMatchers(
+            .authorizeHttpRequests { auth ->                auth                    .requestMatchers(
                         "/api/auth/**",
                         "/api/users/bulk-create", // Allow bulk user creation without auth
                         "/v3/api-docs/**",

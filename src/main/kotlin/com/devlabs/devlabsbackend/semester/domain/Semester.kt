@@ -6,7 +6,6 @@ import com.devlabs.devlabsbackend.user.domain.User
 import jakarta.persistence.*
 import java.util.*
 
-
 @Entity
 @Table(name = "semester")
 class Semester(
