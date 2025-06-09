@@ -6,6 +6,7 @@ import com.devlabs.devlabsbackend.core.pagination.PaginationInfo
 import com.devlabs.devlabsbackend.department.domain.Department
 import com.devlabs.devlabsbackend.department.domain.dto.*
 import com.devlabs.devlabsbackend.department.service.DepartmentService
+import com.devlabs.devlabsbackend.department.service.toDepartmentResponse
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -81,6 +82,17 @@ class DepartmentController(
         return departmentService.getAllDepartments().map{it.toSimpleDepartmentResponse()}
     }
 
+    // Get a specific department by ID
+    @GetMapping("/{departmentId}")
+    fun getDepartmentById(@PathVariable departmentId: UUID): ResponseEntity<Any> {
+        return try {
+            val department = departmentService.getDepartmentById(departmentId)
+            ResponseEntity.ok(department.toDepartmentResponse())
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("message" to "Department not found: ${e.message}"))
+        }
+    }
 
     @GetMapping("/{departmentId}/batches")
     fun getBatches(@PathVariable("departmentId") departmentId: UUID): List<DepartmentBatchResponse> {
@@ -93,24 +105,6 @@ fun Department.toSimpleDepartmentResponse(): SimpleDepartmentResponse {
         id = this.id ?: UUID.randomUUID(),
         name = this.name
     )
-}
-
-fun Department.toDepartmentResponse(): DepartmentResponse {
-    val batchResponses = this.batches.map { batch ->
-        DepartmentBatchResponse(
-            id = batch.id,
-            name = batch.name,
-            graduationYear = batch.graduationYear,
-            section = batch.section
-        )
-    }
-    
-    return DepartmentResponse(
-        id = this.id,
-        name = this.name,
-        batches = batchResponses
-    )
-
 }
 
 fun Batch.toDepartmentBatchResponse(): DepartmentBatchResponse {

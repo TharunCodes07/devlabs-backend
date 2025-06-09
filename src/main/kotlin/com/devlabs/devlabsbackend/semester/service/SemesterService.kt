@@ -9,10 +9,7 @@ import com.devlabs.devlabsbackend.course.repository.CourseRepository
 import com.devlabs.devlabsbackend.semester.domain.DTO.SemesterResponse
 import com.devlabs.devlabsbackend.semester.domain.Semester
 import com.devlabs.devlabsbackend.semester.repository.SemesterRepository
-import com.devlabs.devlabsbackend.user.domain.DTO.UserResponse
 import com.devlabs.devlabsbackend.user.repository.UserRepository
-import com.devlabs.devlabsbackend.user.service.toUserResponse
-import jakarta.persistence.Query
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -140,6 +137,52 @@ class SemesterService
                 description = course.description
             )
         }
+    }
+
+    fun createCourseForSemester(semesterId: UUID, courseRequest: com.devlabs.devlabsbackend.course.domain.DTO.CreateCourseRequest): CourseResponse {
+        val semester = semesterRepository.findById(semesterId).orElseThrow {
+            NotFoundException("Semester with id $semesterId not found")
+        }
+        // Do not set review at all
+        val course = com.devlabs.devlabsbackend.course.domain.Course(
+            name = courseRequest.name,
+            code = courseRequest.code,
+            description = courseRequest.description,
+            type = courseRequest.type,
+            semester = semester
+            // review is not set here
+        )
+        val savedCourse = courseRepository.save(course)
+        return CourseResponse(
+            id = savedCourse.id!!,
+            name = savedCourse.name,
+            code = savedCourse.code,
+            description = savedCourse.description
+        )
+    }
+
+    fun deleteCourseFromSemester(semesterId: UUID, courseId: UUID): CourseResponse {
+        val semester = semesterRepository.findById(semesterId).orElseThrow {
+            NotFoundException("Semester with id $semesterId not found")
+        }
+        
+        val course = courseRepository.findById(courseId).orElseThrow {
+            NotFoundException("Course with id $courseId not found")
+        }
+        
+        if (course.semester.id != semester.id) {
+            throw IllegalArgumentException("Course with id $courseId does not belong to semester with id $semesterId")
+        }
+        
+        val courseResponse = CourseResponse(
+            id = course.id!!,
+            name = course.name,
+            code = course.code,
+            description = course.description
+        )
+        
+        courseRepository.delete(course)
+        return courseResponse
     }
 }
 

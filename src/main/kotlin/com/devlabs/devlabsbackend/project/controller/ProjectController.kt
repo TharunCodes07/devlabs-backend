@@ -40,21 +40,20 @@ class ProjectController(
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(mapOf("error" to "Failed to update project"))        
         }
-    }
-
-    @PutMapping("/{projectId}/course")
-    fun updateProjectCourse(
+    }    @PutMapping("/{projectId}/courses")
+    fun updateProjectCourses(
         @PathVariable projectId: UUID,
-        @RequestBody courseId: UUID?,
+        @RequestBody courseIds: List<UUID>,
         @RequestHeader("X-User-Id") userId: UUID
-    ): ResponseEntity<Any> {        return try {
-            val project = projectService.updateProjectCourse(projectId, courseId, userId)
+    ): ResponseEntity<Any> {
+        return try {
+            val project = projectService.updateProjectCourses(projectId, courseIds, userId)
             ResponseEntity.ok(project.toProjectResponse())
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf("error" to e.message))
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(mapOf("error" to "Failed to update project course"))
+                .body(mapOf("error" to "Failed to update project courses"))
         }
     }
 
@@ -84,7 +83,8 @@ class ProjectController(
             val project = projectService.rejectProject(projectId, instructorId, request.reason)
             ResponseEntity.ok(project)
         } catch (e: IllegalArgumentException) {
-            ResponseEntity.badRequest().body(mapOf("error" to e.message))        } catch (e: Exception) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))        }
+        catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(mapOf("error" to "Failed to reject project"))
         }
@@ -140,20 +140,36 @@ class ProjectController(
         }
     }
 
-
-
     @GetMapping("/course/{courseId}")
     fun getProjectsByCourse(
         @PathVariable courseId: UUID,
         @RequestParam(required = false, defaultValue = "0") page: Int,
-        @RequestParam(required = false, defaultValue = "10") size: Int
+        @RequestParam(required = false, defaultValue = "10") size: Int,
+        @RequestParam(required = false, defaultValue = "title") sortBy: String,
+        @RequestParam(required = false, defaultValue = "asc") sortOrder: String
     ): ResponseEntity<Any> {
         return try {
-            val projects = projectService.getProjectsByCourse(courseId, page, size)
+            val projects = projectService.getProjectsByCourse(courseId, page, size, sortBy, sortOrder)
             ResponseEntity.ok(projects)
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(mapOf("error" to "Failed to get projects"))
+        }
+    }
+
+    @GetMapping("/course/{courseId}/search")
+    fun searchProjectsByCourse(
+        @PathVariable courseId: UUID,
+        @RequestParam query: String,
+        @RequestParam(required = false, defaultValue = "0") page: Int,
+        @RequestParam(required = false, defaultValue = "10") size: Int
+    ): ResponseEntity<Any> {
+        return try {
+            val projects = projectService.searchProjectsByCourse(courseId, query, page, size)
+            ResponseEntity.ok(projects)
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to search projects for course"))
         }
     }
 

@@ -30,13 +30,17 @@ class Project(
     
     var githubUrl: String? = null,
     
-    var status: ProjectStatus = ProjectStatus.PROPOSED,@ManyToOne(fetch = FetchType.LAZY)
+    var status: ProjectStatus = ProjectStatus.PROPOSED,    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "team_id")
     var team: Team,
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "course_id", nullable = true)
-    var course: Course? = null,
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "project_courses",
+        joinColumns = [JoinColumn(name = "project_id")],
+        inverseJoinColumns = [JoinColumn(name = "course_id")]
+    )
+    var courses: MutableSet<Course> = mutableSetOf(),
 
     @OneToMany(mappedBy = "project", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
     var reviews: MutableSet<Review> = mutableSetOf(),

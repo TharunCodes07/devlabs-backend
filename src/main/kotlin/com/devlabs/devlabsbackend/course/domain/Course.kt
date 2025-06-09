@@ -31,12 +31,10 @@ class Course(
     var students: MutableSet<User> = mutableSetOf(),
 
     @OneToMany(fetch = FetchType.LAZY)
-    var instructors: MutableSet<User> = mutableSetOf(),
-
-    @OneToMany(fetch = FetchType.LAZY)
+    var instructors: MutableSet<User> = mutableSetOf(),    @OneToMany(fetch = FetchType.LAZY)
     var batches: MutableSet<Batch> = mutableSetOf(),
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="review_id")
-    var review: Review,
+    var review: Review? = null,
 )

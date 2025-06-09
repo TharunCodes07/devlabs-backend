@@ -15,6 +15,7 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.*
@@ -173,8 +174,16 @@ class UserService(
     }
 
     fun createUsers(users: List<User>): List<User> {
-        return userRepository.saveAll(users)
+    return userRepository.saveAll(users)
+    }
+
+    @Transactional(readOnly = true)
+    fun searchFaculty(query: String): List<UserResponse> {
+        // Get all users with role FACULTY whose name or email contains the query
+        val allUsers = userRepository.findByNameOrEmailContainingIgnoreCase(query)
+        val facultyUsers = allUsers.filter { it.role == Role.FACULTY }
         
+        return facultyUsers.map { it.toUserResponse() }
     }
 }
 

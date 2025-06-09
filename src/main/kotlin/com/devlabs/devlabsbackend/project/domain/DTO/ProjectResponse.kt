@@ -17,11 +17,16 @@ data class ProjectResponse(
     val teamId: UUID?,
     val teamName: String?,
     val teamMembers: List<UserResponse>,
-    val courseId: UUID?,
-    val courseName: String?,
+    val courses: List<CourseInfo>,
     val reviewCount: Int,
     val createdAt: Timestamp,
     val updatedAt: Timestamp
+)
+
+data class CourseInfo(
+    val id: UUID,
+    val name: String,
+    val code: String
 )
 
 fun Project.toProjectResponse(): ProjectResponse {
@@ -35,8 +40,13 @@ fun Project.toProjectResponse(): ProjectResponse {
         teamId = this.team.id,
         teamName = this.team.name,
         teamMembers = this.team.members.map { it.toUserResponse() },
-        courseId = this.course?.id,
-        courseName = this.course?.name,
+        courses = this.courses.map { course ->
+            CourseInfo(
+                id = course.id!!,
+                name = course.name,
+                code = course.code
+            )
+        },
         reviewCount = this.reviews.size,
         createdAt = this.createdAt,
         updatedAt = this.updatedAt

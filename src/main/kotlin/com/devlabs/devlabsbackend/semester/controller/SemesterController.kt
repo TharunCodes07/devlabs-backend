@@ -1,7 +1,9 @@
 package com.devlabs.devlabsbackend.semester.controller
 
-import com.devlabs.devlabsbackend.course.domain.DTO.CourseResponse
+import com.devlabs.devlabsbackend.core.exception.NotFoundException
 import com.devlabs.devlabsbackend.core.pagination.PaginatedResponse
+import com.devlabs.devlabsbackend.course.domain.DTO.CourseResponse
+import com.devlabs.devlabsbackend.course.domain.DTO.CreateCourseRequest
 import com.devlabs.devlabsbackend.semester.domain.DTO.AddOrRemoveCourseDTO
 import com.devlabs.devlabsbackend.semester.domain.DTO.AssignManagersDTO
 import com.devlabs.devlabsbackend.semester.domain.DTO.SemesterResponse
@@ -63,12 +65,43 @@ class SemesterController(val semesterService: SemesterService) {
             HttpStatus.OK
         )
     }
-    
-    @GetMapping("/{id}/courses")
+      @GetMapping("/{id}/courses")
     fun getCoursesBySemesterId(@PathVariable id: UUID): ResponseEntity<List<CourseResponse>> {
         return ResponseEntity(
             semesterService.getCoursesBySemesterId(id),
             HttpStatus.OK
         )
+    }
+    
+    @PostMapping("/{id}/courses")
+    fun createCourseForSemester(
+        @PathVariable id: UUID,
+        @RequestBody courseRequest: CreateCourseRequest
+    ): ResponseEntity<CourseResponse> {
+        return try {
+            val course = semesterService.createCourseForSemester(id, courseRequest)
+            ResponseEntity(course, HttpStatus.CREATED)
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(null)
+        }
+    }
+    
+    @DeleteMapping("/{semesterId}/courses/{courseId}")
+    fun deleteCourseFromSemester(
+        @PathVariable semesterId: UUID,
+        @PathVariable courseId: UUID
+    ): ResponseEntity<CourseResponse> {
+        return try {
+            val course = semesterService.deleteCourseFromSemester(semesterId, courseId)
+            ResponseEntity(course, HttpStatus.OK)
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(null)
+        } catch (e: NotFoundException) {
+            ResponseEntity.notFound().build()
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(null)
+        }
     }
 }

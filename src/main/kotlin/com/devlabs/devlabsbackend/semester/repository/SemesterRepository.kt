@@ -23,4 +23,9 @@ interface SemesterRepository : JpaRepository<Semester, UUID> {
     fun findByNameOrYearContainingIgnoreCase(@Param("query") query: String, pageable: Pageable): Page<Semester>
     
     override fun findAll(pageable: Pageable): Page<Semester>
+    
+    fun findByIsActiveTrue(): List<Semester>
+    
+    @Query("SELECT s FROM Semester s WHERE s.isActive = true AND (LOWER(s.name) LIKE LOWER(CONCAT('%', :query, '%')) OR CAST(s.year AS string) LIKE CONCAT('%', :query, '%'))")
+    fun findActiveSemestersByNameOrYearContainingIgnoreCase(@Param("query") query: String): List<Semester>
 }

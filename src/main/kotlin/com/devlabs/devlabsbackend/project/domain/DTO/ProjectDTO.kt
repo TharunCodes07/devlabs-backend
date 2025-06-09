@@ -14,7 +14,7 @@ data class CreateProjectRequest(
     val teamId: UUID,
     
     @JsonSetter(nulls = Nulls.SKIP)
-    val courseId: UUID? = null
+    val courseIds: List<UUID> = emptyList()
 )
 
 data class UpdateProjectRequest(

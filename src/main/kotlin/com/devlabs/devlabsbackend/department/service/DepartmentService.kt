@@ -107,21 +107,33 @@ class DepartmentService(
     @Transactional(readOnly = true)
     fun getAllDepartments(): List<Department>{
         return departmentRepository.findAllWithBatches()
-    }
-
-    fun createDepartment(request: CreateDepartmentRequest): Department {
+    }    fun createDepartment(request: CreateDepartmentRequest): Department {
         val department = Department(name = request.name)
-        return departmentRepository.save(department)
-    }
-
-    fun updateDepartment(departmentId: UUID, request: UpdateDepartmentRequest): Department {
+        val savedDepartment = departmentRepository.save(department)
+        // Force initialization of batches collection (though it will be empty for new departments)
+        savedDepartment.batches.size
+        return savedDepartment
+    }fun updateDepartment(departmentId: UUID, request: UpdateDepartmentRequest): Department {
         val department = departmentRepository.findById(departmentId).orElseThrow {
             NotFoundException("Department with id $departmentId not found")
         }
         
         request.name?.let { department.name = it }
         
-        return departmentRepository.save(department)
+        val savedDepartment = departmentRepository.save(department)
+        // Force initialization of batches collection
+        savedDepartment.batches.size
+        return savedDepartment
+    }
+
+    @Transactional(readOnly = true)
+    fun getDepartmentById(departmentId: UUID): Department {
+        val department = departmentRepository.findById(departmentId).orElseThrow {
+            NotFoundException("Department with id $departmentId not found")
+        }
+        // Force initialization of batches collection
+        department.batches.size
+        return department
     }
 
     fun deleteDepartment(departmentId: UUID) {
@@ -134,10 +146,12 @@ class DepartmentService(
     // Legacy method for backwards compatibility
     fun addDepartment(department: Department): Department{
         return departmentRepository.save(department)
-    }
-
+    }    @Transactional(readOnly = true)
     fun findDepartmentById(departmentId: UUID): Department?{
-        return departmentRepository.findByIdOrNull(departmentId)
+        val department = departmentRepository.findByIdOrNull(departmentId)
+        // Force initialization of batches collection if department exists
+        department?.batches?.size
+        return department
     }
 
     fun getBatches(department: Department): MutableSet<Batch>{
