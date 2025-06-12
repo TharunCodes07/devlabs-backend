@@ -174,7 +174,7 @@ class BatchService(
         
         val savedBatch = batchRepository.save(batch)
         return savedBatch.toBatchResponse()
-    }    @Transactional(readOnly = true)
+    }    @Transactional
     fun getBatchStudents(
         batchId: UUID,
         page: Int = 0,
@@ -303,6 +303,11 @@ class BatchService(
                 total_count = totalElements
             )
         )
+    }
+
+    @Transactional
+    fun getAllActiveBatches(): List<BatchResponse> {
+        return batchRepository.findByIsActiveTrue().map { it.toBatchResponse() }
     }
 
     private fun createSort(sortBy: String?, sortOrder: String?): Sort {

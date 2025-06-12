@@ -25,16 +25,35 @@ class Course(
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "semester_id")
-    var semester: Semester,
-
-    @OneToMany(fetch = FetchType.LAZY)
+    var semester: Semester,    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "course_student",
+        joinColumns = [JoinColumn(name = "course_id")],
+        inverseJoinColumns = [JoinColumn(name = "student_id")]
+    )
     var students: MutableSet<User> = mutableSetOf(),
 
-    @OneToMany(fetch = FetchType.LAZY)
-    var instructors: MutableSet<User> = mutableSetOf(),    @OneToMany(fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "course_instructor",
+        joinColumns = [JoinColumn(name = "course_id")],
+        inverseJoinColumns = [JoinColumn(name = "instructor_id")]
+    )
+    var instructors: MutableSet<User> = mutableSetOf(),
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "course_batch",
+        joinColumns = [JoinColumn(name = "course_id")],
+        inverseJoinColumns = [JoinColumn(name = "batch_id")]
+    )
     var batches: MutableSet<Batch> = mutableSetOf(),
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name="review_id")
-    var review: Review? = null,
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "course_review",
+        joinColumns = [JoinColumn(name = "course_id")],
+        inverseJoinColumns = [JoinColumn(name = "review_id")]
+    )
+    var reviews: MutableSet<Review> = mutableSetOf(),
 )

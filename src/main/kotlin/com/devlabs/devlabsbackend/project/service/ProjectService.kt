@@ -511,5 +511,21 @@ class ProjectService(
     private fun createSort(sortBy: String, sortOrder: String): Sort {
         val direction = if (sortOrder.lowercase() == "desc") Sort.Direction.DESC else Sort.Direction.ASC
         return Sort.by(direction, sortBy)
+    }    @Transactional
+    fun getAllActiveProjects(): List<ProjectResponse> {
+        return projectRepository.findByStatusIn(listOf(ProjectStatus.ONGOING, ProjectStatus.PROPOSED))
+            .map { it.toProjectResponse() }
+    }
+    
+    @Transactional
+    fun getActiveProjectsBySemester(semesterId: UUID): List<ProjectResponse> {
+        return projectRepository.findActiveProjectsBySemester(semesterId)
+            .map { it.toProjectResponse() }
+    }
+    
+    @Transactional
+    fun getActiveProjectsByBatch(batchId: UUID): List<ProjectResponse> {
+        return projectRepository.findActiveProjectsByBatch(batchId)
+            .map { it.toProjectResponse() }
     }
 }

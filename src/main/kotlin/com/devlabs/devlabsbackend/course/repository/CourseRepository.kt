@@ -26,4 +26,12 @@ interface CourseRepository : JpaRepository<Course, UUID> {
     
     @Query("SELECT c FROM Course c WHERE c.semester.isActive = true AND :student MEMBER OF c.students")
     fun findCoursesByActiveSemestersAndStudent(@Param("student") student: User, pageable: Pageable): Page<Course>
+      // Non-paginated method for active courses (for dropdowns)
+    @Query("SELECT c FROM Course c WHERE c.semester.isActive = true")
+    fun findCoursesByActiveSemesters(): List<Course>
+      // Find courses by semester
+    fun findBySemester(semester: com.devlabs.devlabsbackend.semester.domain.Semester): List<Course>
+    
+    @Query("SELECT c FROM Course c LEFT JOIN FETCH c.semester WHERE c.id IN :ids")
+    fun findAllByIdWithSemester(@Param("ids") ids: List<UUID>): List<Course>
 }

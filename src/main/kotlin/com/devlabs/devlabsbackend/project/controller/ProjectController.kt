@@ -12,7 +12,8 @@ import java.util.*
 @RestController
 @RequestMapping("/projects")
 class ProjectController(
-    private val projectService: ProjectService
+    private val projectService: ProjectService,
+    private val reviewService: com.devlabs.devlabsbackend.review.service.ReviewService
 ) {    @PostMapping
     fun createProject(@RequestBody request: CreateProjectRequest): ResponseEntity<Any> {
         return try {
@@ -271,6 +272,41 @@ class ProjectController(
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(mapOf("error" to "Failed to delete project"))
+        }
+    }
+
+    /**
+     * Check if a project has any reviews assigned to it (directly or indirectly)
+     * 
+     * @param projectId UUID of the project to check
+     * @return Information about assigned reviews
+     */
+    @GetMapping("/{projectId}/reviews")
+    fun getProjectReviews(@PathVariable projectId: UUID): ResponseEntity<Any> {
+        return try {
+            val response = reviewService.checkProjectReviewAssignment(projectId)
+            ResponseEntity.ok(response)
+        } catch (e: com.devlabs.devlabsbackend.core.exception.NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to check project reviews: ${e.message}"))
+        }
+    }
+
+    @GetMapping("/active")
+    fun getActiveProjects(
+        @RequestParam(required = false, defaultValue = "0") page: Int,
+        @RequestParam(required = false, defaultValue = "10") size: Int
+    ): ResponseEntity<Any> {
+        return try {
+            // Reuse the existing getOngoingProjects method as they serve the same purpose
+            val projects = projectService.getOngoingProjects(page, size)
+            ResponseEntity.ok(projects)
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to get active projects"))
         }
     }
 }

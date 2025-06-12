@@ -25,9 +25,6 @@ class Semester(
         joinColumns = [JoinColumn(name = "semester_id")],
         inverseJoinColumns = [JoinColumn(name = "manager_id")]
     )
-    var managers: MutableList<User> = mutableListOf(),
-
-    @ManyToOne
-    @JoinColumn(name = "batch_id")
-    var batch: Batch? = null,
+    var managers: MutableList<User> = mutableListOf(),    @ManyToMany(mappedBy = "semester", fetch = FetchType.LAZY)
+    var batches: MutableSet<Batch> = mutableSetOf(),
     )

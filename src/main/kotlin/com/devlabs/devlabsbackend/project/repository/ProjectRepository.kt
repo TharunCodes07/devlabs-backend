@@ -77,6 +77,15 @@ interface ProjectRepository : JpaRepository<Project, UUID> {
       
     // Find projects that can be auto-completed (ongoing projects in inactive semesters)
     @Query("SELECT p FROM Project p WHERE p.status = com.devlabs.devlabsbackend.project.domain.ProjectStatus.ONGOING AND (p.courses IS EMPTY OR EXISTS (SELECT c FROM p.courses c WHERE c.semester.isActive = false))")
-    fun findProjectsToAutoComplete(): List<Project>
-
+    fun findProjectsToAutoComplete(): List<Project>    // Find active projects by status (ONGOING and PROPOSED) that have courses
+    @Query("SELECT DISTINCT p FROM Project p JOIN p.courses c WHERE p.status IN :statuses")
+    fun findByStatusIn(@Param("statuses") statuses: List<ProjectStatus>): List<Project>
+      // Find active projects by semester
+    @Query("SELECT DISTINCT p FROM Project p JOIN p.courses c WHERE p.status IN (com.devlabs.devlabsbackend.project.domain.ProjectStatus.ONGOING, com.devlabs.devlabsbackend.project.domain.ProjectStatus.PROPOSED) AND c.semester.id = :semesterId")
+    fun findActiveProjectsBySemester(@Param("semesterId") semesterId: UUID): List<Project>
+    
+    // Find active projects by batch
+    @Query("SELECT DISTINCT p FROM Project p JOIN p.courses c JOIN c.batches b WHERE p.status IN (com.devlabs.devlabsbackend.project.domain.ProjectStatus.ONGOING, com.devlabs.devlabsbackend.project.domain.ProjectStatus.PROPOSED) AND b.id = :batchId")
+    fun findActiveProjectsByBatch(@Param("batchId") batchId: UUID): List<Project>
+    
 }

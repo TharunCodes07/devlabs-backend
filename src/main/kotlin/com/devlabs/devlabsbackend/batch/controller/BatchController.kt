@@ -167,6 +167,17 @@ class BatchController(
                 .body(mapOf("message" to "Failed to search batch students: ${e.message}"))
         }
     }
+
+    @GetMapping("/active")
+    fun getAllActiveBatches(): ResponseEntity<Any> {
+        return try {
+            val batches = batchService.getAllActiveBatches()
+            ResponseEntity.ok(batches)
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to retrieve active batches: ${e.message}"))
+        }
+    }
 }
 
 fun Semester.toSemesterBatchResponse(): SemesterBatchResponse {

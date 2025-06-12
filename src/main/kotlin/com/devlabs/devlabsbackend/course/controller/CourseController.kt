@@ -404,4 +404,15 @@ class CourseController(
                 .body(mapOf("error" to "Failed to get active courses: ${e.message}"))
         }
     }
+    
+    @GetMapping("/active")
+    fun getAllActiveCourses(): ResponseEntity<Any> {
+        return try {
+            val courses = courseService.getAllActiveCourses()
+            ResponseEntity.ok(courses)
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to retrieve active courses: ${e.message}"))
+        }
+    }
 }

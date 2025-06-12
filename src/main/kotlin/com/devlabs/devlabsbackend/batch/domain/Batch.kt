@@ -16,14 +16,28 @@ class Batch (
     var name: String,
     var graduationYear: Year,
     var section: String,
-    var isActive: Boolean,
-
-    @OneToMany(fetch = FetchType.LAZY)
+    var isActive: Boolean,    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "batch_student",
+        joinColumns = [JoinColumn(name = "batch_id")],
+        inverseJoinColumns = [JoinColumn(name = "student_id")]
+    )
     val students: MutableSet<User> = mutableSetOf(),
 
     @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "batch_manager",
+        joinColumns = [JoinColumn(name = "batch_id")],
+        inverseJoinColumns = [JoinColumn(name = "manager_id")]
+    )
     val managers: MutableSet<User> = mutableSetOf(),
-    @OneToMany(fetch = FetchType.LAZY, cascade =  [CascadeType.ALL])
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "batch_semester",
+        joinColumns = [JoinColumn(name = "batch_id")],
+        inverseJoinColumns = [JoinColumn(name = "semester_id")]
+    )
     val semester: MutableSet<Semester> = mutableSetOf(),
 
     @ManyToOne

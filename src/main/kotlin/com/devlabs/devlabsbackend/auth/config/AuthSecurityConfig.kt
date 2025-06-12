@@ -55,6 +55,8 @@ class AuthSecurityConfig(
             .authorizeHttpRequests { auth ->                auth                    .requestMatchers(
                         "/api/auth/**",
                         "/api/users/bulk-create", // Allow bulk user creation without auth
+                        "/projects/**", // Allow project access for debugging
+                        "/reviews/**", // Allow review access for debugging
                         "/v3/api-docs/**",
                         "/swagger-ui/**",
                         "/swagger-ui.html",

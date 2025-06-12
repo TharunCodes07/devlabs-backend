@@ -10,7 +10,6 @@ import com.devlabs.devlabsbackend.department.domain.dto.DepartmentBatchResponse
 import com.devlabs.devlabsbackend.department.domain.dto.DepartmentResponse
 import com.devlabs.devlabsbackend.department.domain.dto.UpdateDepartmentRequest
 import com.devlabs.devlabsbackend.department.repository.DepartmentRepository
-import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
@@ -103,11 +102,13 @@ class DepartmentService(
             Sort.by(Sort.Direction.ASC, "name") // Default sort by name
         }    }
 
-    // Legacy method - get all departments without pagination
+
     @Transactional(readOnly = true)
     fun getAllDepartments(): List<Department>{
         return departmentRepository.findAllWithBatches()
-    }    fun createDepartment(request: CreateDepartmentRequest): Department {
+    }
+
+    fun createDepartment(request: CreateDepartmentRequest): Department {
         val department = Department(name = request.name)
         val savedDepartment = departmentRepository.save(department)
         // Force initialization of batches collection (though it will be empty for new departments)

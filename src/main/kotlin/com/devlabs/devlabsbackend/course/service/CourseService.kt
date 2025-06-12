@@ -567,6 +567,11 @@ class CourseService(
             )
         )
     }
+    
+    @Transactional
+    fun getAllActiveCourses(): List<CourseResponse> {
+        return courseRepository.findCoursesByActiveSemesters().map { it.toCourseResponse() }
+    }
 }
 
 fun Course.toCourseResponse(): CourseResponse {

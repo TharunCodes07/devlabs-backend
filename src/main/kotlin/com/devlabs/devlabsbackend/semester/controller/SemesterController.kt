@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*
 import java.util.*
 
 @RestController
-@RequestMapping("/semester")
+@RequestMapping("/api/semester")
 class SemesterController(val semesterService: SemesterService) {
 
     @PutMapping("/{semesterId}/assign-manager")
@@ -65,6 +65,7 @@ class SemesterController(val semesterService: SemesterService) {
             HttpStatus.OK
         )
     }
+
       @GetMapping("/{id}/courses")
     fun getCoursesBySemesterId(@PathVariable id: UUID): ResponseEntity<List<CourseResponse>> {
         return ResponseEntity(
@@ -99,6 +100,17 @@ class SemesterController(val semesterService: SemesterService) {
             ResponseEntity.badRequest().body(null)
         } catch (e: NotFoundException) {
             ResponseEntity.notFound().build()
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(null)
+        }
+    }
+    
+    @GetMapping("/active")
+    fun getAllActiveSemesters(): ResponseEntity<List<SemesterResponse>> {
+        return try {
+            val semesters = semesterService.getAllActiveSemesters()
+            ResponseEntity.ok(semesters)
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(null)

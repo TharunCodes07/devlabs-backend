@@ -5,6 +5,7 @@ import com.devlabs.devlabsbackend.core.pagination.PaginatedResponse
 import com.devlabs.devlabsbackend.core.pagination.PaginationInfo
 import com.devlabs.devlabsbackend.department.domain.Department
 import com.devlabs.devlabsbackend.department.domain.dto.*
+import com.devlabs.devlabsbackend.department.repository.DepartmentRepository
 import com.devlabs.devlabsbackend.department.service.DepartmentService
 import com.devlabs.devlabsbackend.department.service.toDepartmentResponse
 import org.springframework.http.HttpStatus
@@ -17,6 +18,7 @@ import java.util.*
 @RequestMapping("/api/department")
 class DepartmentController(
     private val departmentService: DepartmentService,
+    private val departmentRepository: DepartmentRepository,
 ){
     // Get all departments with pagination and sorting
     @GetMapping
@@ -79,9 +81,9 @@ class DepartmentController(
 
     @GetMapping("/all")
     fun getAllDepartmentsLegacy(): List<SimpleDepartmentResponse>{
-        return departmentService.getAllDepartments().map{it.toSimpleDepartmentResponse()}
+        return departmentRepository.findAll().map{it.toSimpleDepartmentResponse()}
     }
-
+    
     // Get a specific department by ID
     @GetMapping("/{departmentId}")
     fun getDepartmentById(@PathVariable departmentId: UUID): ResponseEntity<Any> {

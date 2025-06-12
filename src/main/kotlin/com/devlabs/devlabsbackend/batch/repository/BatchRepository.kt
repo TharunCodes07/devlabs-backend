@@ -1,6 +1,7 @@
 package com.devlabs.devlabsbackend.batch.repository
 
 import com.devlabs.devlabsbackend.batch.domain.Batch
+import com.devlabs.devlabsbackend.user.domain.User
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
@@ -24,4 +25,11 @@ interface BatchRepository : JpaRepository<Batch, UUID>{
     fun searchByNameOrYearContainingIgnoreCase(@Param("query") query: String, pageable: Pageable): Page<Batch>
 
     override fun findAll(pageable: Pageable): Page<Batch>
+
+    fun findByIsActiveTrue(): List<Batch>
+    
+    /**
+     * Find all batches that contain a specific student
+     */
+    fun findByStudentsContaining(student: User): List<Batch>
 }

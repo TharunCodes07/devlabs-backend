@@ -40,9 +40,12 @@ class Project(
         joinColumns = [JoinColumn(name = "project_id")],
         inverseJoinColumns = [JoinColumn(name = "course_id")]
     )
-    var courses: MutableSet<Course> = mutableSetOf(),
-
-    @OneToMany(mappedBy = "project", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+    var courses: MutableSet<Course> = mutableSetOf(),    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "review_project",
+        joinColumns = [JoinColumn(name = "project_id")],
+        inverseJoinColumns = [JoinColumn(name = "review_id")]
+    )
     var reviews: MutableSet<Review> = mutableSetOf(),
     
     val createdAt: Timestamp = Timestamp.from(Instant.now()),

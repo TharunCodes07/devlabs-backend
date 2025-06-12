@@ -100,6 +100,11 @@ class SemesterService
         )
     }
     
+    @Transactional
+    fun getAllActiveSemesters(): List<SemesterResponse> {
+        return semesterRepository.findByIsActiveTrue().map { it.toSemesterResponse() }
+    }
+    
     private fun createSort(sortBy: String, sortOrder: String): Sort {
         val direction = if (sortOrder.lowercase() == "desc") Sort.Direction.DESC else Sort.Direction.ASC
         return Sort.by(direction, sortBy)
