@@ -8,6 +8,8 @@ import com.devlabs.devlabsbackend.core.pagination.PaginatedResponse
 import com.devlabs.devlabsbackend.core.pagination.PaginationInfo
 import com.devlabs.devlabsbackend.course.domain.Course
 import com.devlabs.devlabsbackend.course.repository.CourseRepository
+import com.devlabs.devlabsbackend.individualscore.repository.IndividualScoreRepository
+import com.devlabs.devlabsbackend.project.domain.Project
 import com.devlabs.devlabsbackend.project.domain.ProjectStatus
 import com.devlabs.devlabsbackend.project.repository.ProjectRepository
 import com.devlabs.devlabsbackend.review.domain.DTO.*
@@ -35,7 +37,8 @@ class ReviewService(
     private val courseRepository: CourseRepository,
     private val semesterRepository: SemesterRepository,
     private val batchRepository: BatchRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val individualScoreRepository: IndividualScoreRepository
 ) {
       @Transactional
     fun createReview(request: CreateReviewRequest, userId: UUID): Review {
@@ -187,15 +190,13 @@ class ReviewService(
         }
         
         return reviewRepository.save(review)
-    }
-    
-    @Transactional(readOnly = true)    fun getReviewById(reviewId: UUID): Review {
+    }    @Transactional(readOnly = true)    
+    fun getReviewById(reviewId: UUID): ReviewResponse {
         val review = reviewRepository.findById(reviewId).orElseThrow {
             NotFoundException("Review with id $reviewId not found")
         }
-        // Ensure createdBy is loaded to avoid lazy loading issues
-        review.createdBy.name
-        return review
+        // Convert to response within the transaction to avoid lazy loading issues
+        return review.toReviewResponse()
     }
     
     @Transactional(readOnly = true)
@@ -929,6 +930,210 @@ class ReviewService(
             upcomingReviews = upcomingReviews.map { it.toReviewResponse() },            completedReviews = completedReviews.map { it.toReviewResponse() }
         )
     }
+    
+    /**
+     * Get review results for a specific review, project, and user
+     * Access control:
+     * - Students: Only see their own scores and only if review is published
+     * - Faculty/Admin/Manager: See all scores regardless of publication status
+     */
+    @Transactional(readOnly = true)
+    fun getReviewResults(reviewId: UUID, projectId: UUID, userId: UUID): ReviewResultsResponse {
+        // Get the user making the request
+        val user = userRepository.findById(userId).orElseThrow {
+            NotFoundException("User with id $userId not found")
+        }
+        
+        // Get the review
+        val review = reviewRepository.findById(reviewId).orElseThrow {
+            NotFoundException("Review with id $reviewId not found")
+        }
+        
+        // Get the project
+        val project = projectRepository.findById(projectId).orElseThrow {
+            NotFoundException("Project with id $projectId not found")
+        }
+        
+        // Verify the project is associated with the review
+        if (!isProjectAssociatedWithReview(review, project)) {
+            throw IllegalArgumentException("Project is not part of this review")
+        }
+        
+        // Check access permissions based on user role
+        val canViewAllResults = when (user.role) {
+            Role.ADMIN, Role.MANAGER -> true
+            Role.FACULTY -> {
+                // Faculty can view all results for projects in courses they teach
+                project.courses.any { course -> course.instructors.contains(user) }
+            }
+            Role.STUDENT -> {
+                // Students can only view results if published and they're part of the project
+                if (!review.isPublished) {
+                    throw ForbiddenException("Students can only view results for published reviews")
+                }
+                if (!project.team.members.contains(user)) {
+                    throw ForbiddenException("Students can only view results for their own projects")
+                }
+                false // Students can only see their own results
+            }
+            else -> throw ForbiddenException("Invalid user role")
+        }
+        
+        // For students with unpublished reviews, deny access
+        if (user.role == Role.STUDENT && !review.isPublished) {
+            throw ForbiddenException("Students can only view results for published reviews")
+        }
+        
+        // Get all individual scores for this review and project
+        val allScores = individualScoreRepository.findByReviewAndProject(review, project)
+        
+        // Group scores by participant
+        val scoresByParticipant = allScores.groupBy { it.participant }
+        
+        // Filter participants based on access control
+        val filteredParticipants = if (canViewAllResults) {
+            scoresByParticipant.keys
+        } else {
+            // For students, only show their own results
+            scoresByParticipant.keys.filter { it.id == user.id }
+        }
+        
+        // Build results for each participant
+        val results = filteredParticipants.map { participant ->
+            val participantScores = scoresByParticipant[participant] ?: emptyList()
+            
+            // Group by criterion to calculate totals
+            val scoresByCriterion = participantScores.groupBy { it.criterion }
+              val criterionResults = scoresByCriterion.entries.map { entry ->
+                val criterion = entry.key
+                val scores = entry.value
+                // Take the average if multiple scores exist for the same criterion
+                val averageScore = scores.map { it.score }.average()
+                
+                CriterionResult(
+                    criterionId = criterion.id!!,
+                    criterionName = criterion.name,
+                    score = averageScore,
+                    maxScore = criterion.maxScore.toDouble(),
+                    comment = scores.firstOrNull()?.comment
+                )
+            }
+            
+            val totalScore = criterionResults.sumOf { it.score }
+            val maxPossibleScore = criterionResults.sumOf { it.maxScore }
+            val percentage = if (maxPossibleScore > 0) (totalScore / maxPossibleScore) * 100 else 0.0
+            
+            ParticipantResult(
+                participantId = participant.id!!,
+                participantName = participant.name,
+                scores = criterionResults,
+                totalScore = totalScore,
+                maxPossibleScore = maxPossibleScore,
+                percentage = percentage
+            )
+        }
+        
+        return ReviewResultsResponse(
+            reviewId = review.id!!,
+            reviewName = review.name,
+            projectId = project.id!!,
+            projectTitle = project.title,
+            isPublished = review.isPublished,
+            userRole = user.role.name,
+            canViewAllResults = canViewAllResults,
+            results = results
+        )
+    }
+
+    /**
+     * Comprehensive check to determine if a project is associated with a review
+     * through any valid relationship (direct, course, batch, or semester)
+     */
+    private fun isProjectAssociatedWithReview(review: Review, project: Project): Boolean {
+        // Initialize project relationships to avoid lazy loading issues
+        project.courses.size
+        project.team.members.size
+        
+        // 1. Check for direct project assignment
+        if (review.projects.any { it.id == project.id }) {
+            return true
+        }
+        
+        // 2. Check for course-based assignment
+        val projectCourses = project.courses
+        if (projectCourses.isNotEmpty()) {
+            // Check for direct course-review relationship
+            if (review.courses.any { reviewCourse -> 
+                projectCourses.any { projectCourse -> projectCourse.id == reviewCourse.id } 
+            }) {
+                return true
+            }
+        }
+        
+        // 3. Check for batch-based assignment (through team members)
+        val teamMembers = project.team.members
+        if (teamMembers.isNotEmpty()) {
+            // Get all batches that contain any of the team members
+            val memberBatches = mutableSetOf<Batch>()
+            teamMembers.forEach { member ->
+                val batches = batchRepository.findByStudentsContaining(member)
+                memberBatches.addAll(batches)
+            }
+            
+            if (memberBatches.isNotEmpty()) {
+                // Check for reviews directly assigned to these batches
+                if (review.batches.any { batch -> memberBatches.any { it.id == batch.id } }) {
+                    return true
+                }
+                
+                // Check for reviews assigned to courses that include these batches
+                val allCourses = courseRepository.findAll()
+                val batchCourses = allCourses.filter { course ->
+                    course.batches.any { batch -> memberBatches.any { it.id == batch.id } }
+                }
+                
+                if (batchCourses.isNotEmpty()) {
+                    if (review.courses.any { course -> batchCourses.any { it.id == course.id } }) {
+                        return true
+                    }
+                }
+            }
+        }
+        
+        // 4. Check for semester-based assignment
+        val semesters = mutableSetOf<UUID>()
+          // Get semesters from project courses
+        for (course in projectCourses) {
+            course.semester.id?.let { semesters.add(it) }
+        }
+        
+        // Get semesters from team member batches
+        for (member in teamMembers) {
+            val batches = batchRepository.findByStudentsContaining(member)
+            for (batch in batches) {
+                for (semester in batch.semester) {
+                    semester.id?.let { semesters.add(it) }
+                }
+            }
+        }
+        
+        if (semesters.isNotEmpty()) {
+            // Check if any of these semesters have courses associated with the review
+            for (semesterId in semesters) {
+                val semester = semesterRepository.findById(semesterId).orElse(null)
+                if (semester != null) {
+                    val semesterCourses = semester.courses
+                    if (review.courses.any { course -> semesterCourses.any { it.id == course.id } }) {
+                        return true
+                    }
+                }
+            }
+        }
+        
+        return false
+    }
+
+    // ...existing code...
 }
 
 /**
@@ -1008,3 +1213,31 @@ fun Review.toReviewResponse(): ReviewResponse {
         } ?: throw IllegalStateException("Review must have rubrics")
     )
 }
+
+data class ReviewResultsResponse(
+    val reviewId: UUID,
+    val reviewName: String,
+    val projectId: UUID,
+    val projectTitle: String,
+    val isPublished: Boolean,
+    val userRole: String,
+    val canViewAllResults: Boolean,
+    val results: List<ParticipantResult>
+)
+
+data class ParticipantResult(
+    val participantId: UUID,
+    val participantName: String,
+    val scores: List<CriterionResult>,
+    val totalScore: Double,
+    val maxPossibleScore: Double,
+    val percentage: Double
+)
+
+data class CriterionResult(
+    val criterionId: UUID,
+    val criterionName: String,
+    val score: Double,
+    val maxScore: Double,
+    val comment: String?
+)

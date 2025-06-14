@@ -3,6 +3,7 @@ package com.devlabs.devlabsbackend.review.controller
 import com.devlabs.devlabsbackend.core.exception.ForbiddenException
 import com.devlabs.devlabsbackend.core.exception.NotFoundException
 import com.devlabs.devlabsbackend.review.domain.DTO.CreateReviewRequest
+import com.devlabs.devlabsbackend.review.domain.DTO.ReviewResultsRequest
 import com.devlabs.devlabsbackend.review.domain.DTO.UpdateReviewRequest
 import com.devlabs.devlabsbackend.review.service.ReviewService
 import com.devlabs.devlabsbackend.review.service.toReviewResponse
@@ -60,12 +61,11 @@ class ReviewController(
                 .body(mapOf("error" to "Failed to update review: ${e.message}"))
         }
     }
-    
-    @GetMapping("/{reviewId}")
+      @GetMapping("/{reviewId}")
     fun getReviewById(@PathVariable reviewId: UUID): ResponseEntity<Any> {
         return try {
             val review = reviewService.getReviewById(reviewId)
-            ResponseEntity.ok(review.toReviewResponse())
+            ResponseEntity.ok(review)
         } catch (e: NotFoundException) {
             ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(mapOf("error" to e.message))
@@ -258,6 +258,34 @@ class ReviewController(
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(mapOf("error" to "Failed to check project review assignment: ${e.message}"))
+        }
+    }    /**
+     * Get review results for a specific review and project
+     * Access control:
+     * - Students: Only see their own scores and only if review is published
+     * - Faculty: See all scores for projects in courses they teach
+     * - Admin/Manager: See all scores regardless of publication status
+     */
+    @PostMapping("/{reviewId}/results")
+    fun getReviewResults(
+        @PathVariable reviewId: UUID,
+        @RequestBody request: ReviewResultsRequest
+    ): ResponseEntity<Any> {
+        return try {
+            val results = reviewService.getReviewResults(reviewId, request.projectId, request.userId)
+            ResponseEntity.ok(results)
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: ForbiddenException) {
+            ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(mapOf("error" to e.message))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to get review results: ${e.message}"))
         }
     }
 }
