@@ -10,8 +10,9 @@ import com.devlabs.devlabsbackend.project.domain.Project
 import com.devlabs.devlabsbackend.project.domain.ProjectStatus
 import com.devlabs.devlabsbackend.project.repository.ProjectRepository
 import com.devlabs.devlabsbackend.team.repository.TeamRepository
+import com.devlabs.devlabsbackend.user.domain.Role
 import com.devlabs.devlabsbackend.user.repository.UserRepository
-import jakarta.transaction.Transactional
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
@@ -527,5 +528,93 @@ class ProjectService(
     fun getActiveProjectsByBatch(batchId: UUID): List<ProjectResponse> {
         return projectRepository.findActiveProjectsByBatch(batchId)
             .map { it.toProjectResponse() }
+    }
+    
+    @Transactional(readOnly = true)
+    fun getArchivedProjects(userId: UUID, page: Int = 0, size: Int = 10): PaginatedResponse<ProjectResponse> {
+        val user = userRepository.findById(userId).orElseThrow {
+            NotFoundException("User with id $userId not found")
+        }
+        
+        val pageable: Pageable = PageRequest.of(page, size)
+        
+        val projectsPage = when (user.role) {
+            Role.ADMIN, Role.MANAGER -> {
+                // Admin and managers can see all completed projects
+                projectRepository.findByStatusOrderByUpdatedAtDesc(ProjectStatus.COMPLETED, pageable)
+            }
+            Role.FACULTY -> {
+                // Faculty can see completed projects for courses they have taught
+                projectRepository.findCompletedProjectsByFaculty(user, pageable)
+            }
+            Role.STUDENT -> {
+                // Students can see completed projects they were team members of
+                projectRepository.findCompletedProjectsByStudent(user, pageable)
+            }
+        }
+        
+        // Initialize lazy-loaded collections
+        projectsPage.content.forEach { project ->
+            project.team.members.size
+            project.courses.forEach { course ->
+                course.students.size
+                course.instructors.size
+            }
+            project.reviews.size
+        }
+        
+        return PaginatedResponse(
+            data = projectsPage.content.map { it.toProjectResponse() },
+            pagination = PaginationInfo(
+                current_page = page,
+                per_page = size,
+                total_pages = projectsPage.totalPages,
+                total_count = projectsPage.totalElements.toInt()
+            )
+        )
+    }
+    
+    @Transactional(readOnly = true)
+    fun searchArchivedProjects(userId: UUID, query: String, page: Int = 0, size: Int = 10): PaginatedResponse<ProjectResponse> {
+        val user = userRepository.findById(userId).orElseThrow {
+            NotFoundException("User with id $userId not found")
+        }
+        
+        val pageable: Pageable = PageRequest.of(page, size)
+        
+        val projectsPage = when (user.role) {
+            Role.ADMIN, Role.MANAGER -> {
+                // Admin and managers can search all completed projects
+                projectRepository.searchCompletedProjects(query, pageable)
+            }
+            Role.FACULTY -> {
+                // Faculty can search completed projects for courses they have taught
+                projectRepository.searchCompletedProjectsByFaculty(user, query, pageable)
+            }
+            Role.STUDENT -> {
+                // Students can search completed projects they were team members of
+                projectRepository.searchCompletedProjectsByStudent(user, query, pageable)
+            }
+        }
+        
+        // Initialize lazy-loaded collections
+        projectsPage.content.forEach { project ->
+            project.team.members.size
+            project.courses.forEach { course ->
+                course.students.size
+                course.instructors.size
+            }
+            project.reviews.size
+        }
+        
+        return PaginatedResponse(
+            data = projectsPage.content.map { it.toProjectResponse() },
+            pagination = PaginationInfo(
+                current_page = page,
+                per_page = size,
+                total_pages = projectsPage.totalPages,
+                total_count = projectsPage.totalElements.toInt()
+            )
+        )
     }
 }

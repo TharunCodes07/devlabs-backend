@@ -189,6 +189,16 @@ class SemesterService
         courseRepository.delete(course)
         return courseResponse
     }
+
+    fun createSemester(request: com.devlabs.devlabsbackend.semester.domain.DTO.CreateSemesterRequest): SemesterResponse {
+        val semester = Semester(
+            name = request.name,
+            year = request.year,
+            isActive = request.isActive
+        )
+        val savedSemester = semesterRepository.save(semester)
+        return savedSemester.toSemesterResponse()
+    }
 }
 
 fun Semester.toSemesterResponse(): SemesterResponse {

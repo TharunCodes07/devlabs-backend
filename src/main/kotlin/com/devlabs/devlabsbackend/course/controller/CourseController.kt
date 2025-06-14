@@ -404,8 +404,7 @@ class CourseController(
                 .body(mapOf("error" to "Failed to get active courses: ${e.message}"))
         }
     }
-    
-    @GetMapping("/active")
+      @GetMapping("/active")
     fun getAllActiveCourses(): ResponseEntity<Any> {
         return try {
             val courses = courseService.getAllActiveCourses()
@@ -413,6 +412,56 @@ class CourseController(
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(mapOf("error" to "Failed to retrieve active courses: ${e.message}"))
+        }
+    }
+      @GetMapping("/{userId}/active-courses")
+    fun getUserActiveCourses(@PathVariable userId: UUID): ResponseEntity<Any> {
+        return try {
+            val courses = courseService.getActiveCoursesForUser(userId)
+            ResponseEntity.ok(courses)
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to retrieve user's active courses: ${e.message}"))
+        }
+    }
+    
+    @GetMapping("/student/{studentId}/courses-with-scores")
+    fun getStudentCoursesWithScores(@PathVariable studentId: UUID): ResponseEntity<Any> {
+        return try {
+            val coursesWithScores = courseService.getStudentActiveCoursesWithScores(studentId)
+            ResponseEntity.ok(coursesWithScores)
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to retrieve student's courses with scores: ${e.message}"))
+        }
+    }
+
+    @GetMapping("/student/{studentId}/course/{courseId}/review")
+    fun getStudentCoursePerformanceChart(
+        @PathVariable studentId: UUID,
+        @PathVariable courseId: UUID
+    ): ResponseEntity<Any> {
+        return try {
+            val performanceData = courseService.getStudentCoursePerformanceChart(studentId, courseId)
+            ResponseEntity.ok(performanceData)
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to retrieve performance chart data: ${e.message}"))
         }
     }
 }

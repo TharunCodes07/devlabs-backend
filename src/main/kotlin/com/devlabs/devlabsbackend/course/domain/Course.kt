@@ -47,13 +47,6 @@ class Course(
         joinColumns = [JoinColumn(name = "course_id")],
         inverseJoinColumns = [JoinColumn(name = "batch_id")]
     )
-    var batches: MutableSet<Batch> = mutableSetOf(),
-
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "course_review",
-        joinColumns = [JoinColumn(name = "course_id")],
-        inverseJoinColumns = [JoinColumn(name = "review_id")]
-    )
+    var batches: MutableSet<Batch> = mutableSetOf(),    @ManyToMany(fetch = FetchType.LAZY, mappedBy = "courses")
     var reviews: MutableSet<Review> = mutableSetOf(),
 )

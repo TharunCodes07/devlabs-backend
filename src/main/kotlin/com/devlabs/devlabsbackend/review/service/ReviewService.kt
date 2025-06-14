@@ -7,27 +7,13 @@ import com.devlabs.devlabsbackend.core.exception.NotFoundException
 import com.devlabs.devlabsbackend.core.pagination.PaginatedResponse
 import com.devlabs.devlabsbackend.core.pagination.PaginationInfo
 import com.devlabs.devlabsbackend.course.domain.Course
-import com.devlabs.devlabsbackend.course.domain.DTO.CourseResponse
 import com.devlabs.devlabsbackend.course.repository.CourseRepository
-import com.devlabs.devlabsbackend.course.service.toCourseResponse
-import com.devlabs.devlabsbackend.project.domain.Project
-import com.devlabs.devlabsbackend.project.domain.DTO.ProjectResponse
-import com.devlabs.devlabsbackend.project.domain.DTO.toProjectResponse
 import com.devlabs.devlabsbackend.project.domain.ProjectStatus
 import com.devlabs.devlabsbackend.project.repository.ProjectRepository
-import com.devlabs.devlabsbackend.review.domain.DTO.CourseInfo
-import com.devlabs.devlabsbackend.review.domain.DTO.CreateReviewRequest
-import com.devlabs.devlabsbackend.review.domain.DTO.ProjectInfo
-import com.devlabs.devlabsbackend.review.domain.DTO.ReviewResponse
-import com.devlabs.devlabsbackend.review.domain.DTO.RubricInfo
-import com.devlabs.devlabsbackend.review.domain.DTO.SemesterInfo
-import com.devlabs.devlabsbackend.review.domain.DTO.TeamMemberInfo
-import com.devlabs.devlabsbackend.review.domain.DTO.UpdateReviewRequest
+import com.devlabs.devlabsbackend.review.domain.DTO.*
 import com.devlabs.devlabsbackend.review.domain.Review
 import com.devlabs.devlabsbackend.review.repository.ReviewRepository
-import com.devlabs.devlabsbackend.rubrics.domain.dto.RubricsResponse
 import com.devlabs.devlabsbackend.rubrics.repository.RubricsRepository
-import com.devlabs.devlabsbackend.rubrics.service.toRubricsResponse
 import com.devlabs.devlabsbackend.semester.repository.SemesterRepository
 import com.devlabs.devlabsbackend.user.domain.Role
 import com.devlabs.devlabsbackend.user.domain.User
@@ -82,23 +68,28 @@ class ReviewService(
             endDate = request.endDate,
             rubrics = rubrics
         )
-        
-        // Save the review first to get an ID
+          // Save the review first to get an ID
         val savedReview = reviewRepository.save(review)
-          // Process requested entities
+        println("DEBUG: Created review ${savedReview.name} with ID ${savedReview.id}")
+        
+        // Process requested entities
         if (!request.courseIds.isNullOrEmpty()) {
+            println("DEBUG: Adding ${request.courseIds.size} courses directly to review")
             addCoursesToReview(savedReview, request.courseIds, user)
         }
         
         if (!request.semesterIds.isNullOrEmpty()) {
+            println("DEBUG: Adding courses from ${request.semesterIds.size} semesters to review")
             addSemestersToReview(savedReview, request.semesterIds, user)
         }
         
         if (!request.projectIds.isNullOrEmpty()) {
+            println("DEBUG: Adding ${request.projectIds.size} projects to review")
             addProjectsToReview(savedReview, request.projectIds, user)
         }
         
         if (!request.batchIds.isNullOrEmpty()) {
+            println("DEBUG: Adding ${request.batchIds.size} batches to review")
             addBatchesToReview(savedReview, request.batchIds, user)
         }
         
@@ -392,6 +383,85 @@ class ReviewService(
         return true
     }
     
+    /**
+     * Get the publication status of a review
+     */
+    @Transactional(readOnly = true)
+    fun getPublicationStatus(reviewId: UUID): ReviewPublicationResponse {
+        val review = reviewRepository.findById(reviewId).orElseThrow {
+            NotFoundException("Review with id $reviewId not found")
+        }
+        
+        return ReviewPublicationResponse(
+            reviewId = review.id!!,
+            reviewName = review.name,
+            isPublished = review.isPublished,
+            publishDate = null // We'll add this in a future update if needed
+        )
+    }
+    
+    /**
+     * Publish a review - only accessible to ADMIN and MANAGER roles
+     */
+    @Transactional
+    fun publishReview(reviewId: UUID, userId: UUID): ReviewPublicationResponse {
+        // Validate user permissions
+        val user = userRepository.findById(userId).orElseThrow {
+            NotFoundException("User with id $userId not found")
+        }
+        
+        // Only Admin and Manager can publish reviews
+        if (user.role != Role.ADMIN && user.role != Role.MANAGER) {
+            throw ForbiddenException("Only admin or manager can publish reviews")
+        }
+        
+        val review = reviewRepository.findById(reviewId).orElseThrow {
+            NotFoundException("Review with id $reviewId not found")
+        }
+        
+        // Update publication status
+        review.isPublished = true
+        val updatedReview = reviewRepository.save(review)
+        
+        return ReviewPublicationResponse(
+            reviewId = updatedReview.id!!,
+            reviewName = updatedReview.name,
+            isPublished = updatedReview.isPublished,
+            publishDate = LocalDate.now() // Current date as publish date
+        )
+    }
+    
+    /**
+     * Unpublish a review - only accessible to ADMIN and MANAGER roles
+     */
+    @Transactional
+    fun unpublishReview(reviewId: UUID, userId: UUID): ReviewPublicationResponse {
+        // Validate user permissions
+        val user = userRepository.findById(userId).orElseThrow {
+            NotFoundException("User with id $userId not found")
+        }
+        
+        // Only Admin and Manager can unpublish reviews
+        if (user.role != Role.ADMIN && user.role != Role.MANAGER) {
+            throw ForbiddenException("Only admin or manager can unpublish reviews")
+        }
+        
+        val review = reviewRepository.findById(reviewId).orElseThrow {
+            NotFoundException("Review with id $reviewId not found")
+        }
+        
+        // Update publication status
+        review.isPublished = false
+        val updatedReview = reviewRepository.save(review)
+        
+        return ReviewPublicationResponse(
+            reviewId = updatedReview.id!!,
+            reviewName = updatedReview.name,
+            isPublished = updatedReview.isPublished,
+            publishDate = null // Remove publish date when unpublishing
+        )
+    }
+    
     // Helper methods
     
     private fun validateFacultyCoursesAccess(faculty: User, courseIds: List<UUID>) {
@@ -412,8 +482,7 @@ class ReviewService(
         if (!hasAccess) {
             throw ForbiddenException("Faculty can only update reviews for their courses")
         }
-    }
-      @Transactional
+    }    @Transactional
     private fun addCoursesToReview(review: Review, courseIds: List<UUID>, user: User) {
         val courses = courseRepository.findAllByIdWithSemester(courseIds)
         
@@ -424,19 +493,24 @@ class ReviewService(
                 }
             }
         }
-        
         courses.forEach { course ->
-            course.reviews.add(review)
-            review.courses.add(course)
+            // Check if relationship already exists to prevent duplicate key constraint violation
+            if (!review.courses.contains(course)) {
+                println("DEBUG: Adding course ${course.name} (${course.id}) to review ${review.name} (${review.id})")
+                // Only update the owning side (Review) to avoid duplicate inserts
+                // Hibernate will automatically sync the inverse side (Course.reviews) when using mappedBy
+                review.courses.add(course)
+            } else {
+                println("DEBUG: Course ${course.name} (${course.id}) already exists in review ${review.name} (${review.id}), skipping")
+            }
         }
     }
     
     @Transactional
     private fun removeCoursesFromReview(review: Review, courseIds: List<UUID>) {
         val courses = courseRepository.findAllById(courseIds)
-        
         courses.forEach { course ->
-            course.reviews.remove(review)
+            // Only update the owning side (Review) - Hibernate will sync the inverse side automatically
             review.courses.remove(course)
         }
     }
@@ -464,9 +538,11 @@ class ReviewService(
                 }
             }
         }
-        
-        validProjects.forEach { project ->
-            review.projects.add(project)
+          validProjects.forEach { project ->
+            // Check if relationship already exists to prevent duplicate key constraint violation
+            if (!review.projects.contains(project)) {
+                review.projects.add(project)
+            }
         }
     }
     
@@ -488,13 +564,15 @@ class ReviewService(
         projects.forEach { project ->
             review.projects.remove(project)
         }
-    }
-      @Transactional
+    }    @Transactional
     private fun addBatchesToReview(review: Review, batchIds: List<UUID>, user: User) {
         val batches = batchRepository.findAllById(batchIds)
         
         batches.forEach { batch ->
-            review.batches.add(batch)
+            // Check if relationship already exists to prevent duplicate key constraint violation
+            if (!review.batches.contains(batch)) {
+                review.batches.add(batch)
+            }
         }
     }
     
@@ -518,10 +596,15 @@ class ReviewService(
                 // Check faculty permissions if needed
                 if (user.role == Role.FACULTY && !course.instructors.contains(user)) {
                     throw ForbiddenException("Faculty can only add reviews to courses they instruct")
+                }                // Check if relationship already exists to prevent duplicate key constraint violation
+                if (!review.courses.contains(course)) {
+                    println("DEBUG: Adding course ${course.name} (${course.id}) to review ${review.name} (${review.id}) via semester ${semester.name}")
+                    // Only update the owning side (Review) to avoid duplicate inserts
+                    // Hibernate will automatically sync the inverse side (Course.reviews) when using mappedBy
+                    review.courses.add(course)
+                } else {
+                    println("DEBUG: Course ${course.name} (${course.id}) already exists in review ${review.name} (${review.id}) via semester ${semester.name}, skipping")
                 }
-                
-                course.reviews.add(review)
-                review.courses.add(course)
             }
         }
     }
@@ -531,11 +614,9 @@ class ReviewService(
         
         semesters.forEach { semester ->
             // Get all courses in this semester (now eagerly loaded)
-            val semesterCourses = semester.courses
-            
-            // Remove each course from the review
+            val semesterCourses = semester.courses            // Remove each course from the review
             semesterCourses.forEach { course ->
-                course.reviews.remove(review)
+                // Only update the owning side (Review) - Hibernate will sync the inverse side automatically
                 review.courses.remove(course)
             }
         }
@@ -874,3 +955,12 @@ fun Review.toReviewResponse(): ReviewResponse {
         } ?: throw IllegalStateException("Review must have rubrics")
     )
 }
+
+/**
+ * Data class to represent the response for review publication status
+ */
+data class ReviewPublicationResponse(
+    val reviewId: UUID,
+    val reviewName: String,    val isPublished: Boolean,
+    val publishDate: LocalDate?
+)

@@ -3,6 +3,7 @@ package com.devlabs.devlabsbackend.individualscore.domain.DTO
 import java.util.*
 
 data class SubmitScoreRequest(
+    val userId: UUID,
     val reviewId: UUID,
     val projectId: UUID,
     val scores: List<ParticipantScore>

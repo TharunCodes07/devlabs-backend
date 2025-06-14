@@ -17,6 +17,16 @@ import java.util.*
 @RequestMapping("/api/semester")
 class SemesterController(val semesterService: SemesterService) {
 
+    @PostMapping
+    fun createSemester(@RequestBody request: com.devlabs.devlabsbackend.semester.domain.DTO.CreateSemesterRequest): ResponseEntity<SemesterResponse> {
+        return try {
+            val semester = semesterService.createSemester(request)
+            ResponseEntity(semester, HttpStatus.CREATED)
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null)
+        }
+    }
+
     @PutMapping("/{semesterId}/assign-manager")
     fun assignManagers(@RequestBody assignManagersDTO: AssignManagersDTO, @PathVariable semesterId: UUID) {
         semesterService.assignManagersToSemester(managersId = assignManagersDTO.managersId, semesterId = semesterId)

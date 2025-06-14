@@ -6,6 +6,7 @@ import java.util.*
  * DTO for submitting course-specific scores
  */
 data class SubmitCourseScoreRequest(
+    val userId: UUID,
     val reviewId: UUID,
     val projectId: UUID,
     val courseId: UUID,
@@ -29,12 +30,20 @@ data class CourseEvaluationInfo(
 )
 
 /**
+ * DTO for instructor information
+ */
+data class InstructorInfo(
+    val id: UUID,
+    val name: String
+)
+
+/**
  * DTO for course evaluation summary
  */
 data class CourseEvaluationSummary(
     val courseId: UUID,
     val courseName: String,
-    val instructors: List<String>,
+    val instructors: List<InstructorInfo>,
     val hasEvaluation: Boolean,
     val evaluationCount: Int
 )

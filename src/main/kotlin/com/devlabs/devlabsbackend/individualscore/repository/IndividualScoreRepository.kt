@@ -45,15 +45,34 @@ interface IndividualScoreRepository : JpaRepository<IndividualScore, UUID> {
         review: Review,
         project: Project,
         course: Course
-    ): List<IndividualScore>
-    
-    fun findByParticipantAndCriterionAndReviewAndProjectAndCourse(
+    ): List<IndividualScore>    fun findByParticipantAndCriterionAndReviewAndProjectAndCourse(
         participant: User,
         criterion: Criterion,
         review: Review,
         project: Project,
         course: Course
     ): IndividualScore?
+    
+    // Find all scores for a student across projects that are associated with a specific course
+    @Query("SELECT s FROM IndividualScore s WHERE s.participant = :student AND :course MEMBER OF s.project.courses")
+    fun findByParticipantAndProjectInCourse(
+        @Param("student") student: User,
+        @Param("course") course: Course
+    ): List<IndividualScore>
+    
+    // Get average score percentage for a student in a course
+    @Query("SELECT COALESCE(AVG(s.score / s.criterion.maxScore * 100), 0.0) FROM IndividualScore s WHERE s.participant = :student AND :course MEMBER OF s.project.courses")
+    fun getAverageScorePercentageForStudentAndCourse(
+        @Param("student") student: User,
+        @Param("course") course: Course
+    ): Double
+    
+    // Count distinct reviews where a student has scores in a course
+    @Query("SELECT COUNT(DISTINCT s.review) FROM IndividualScore s WHERE s.participant = :student AND :course MEMBER OF s.project.courses")
+    fun countDistinctReviewsForStudentAndCourse(
+        @Param("student") student: User,
+        @Param("course") course: Course
+    ): Int
     
     @Query("SELECT DISTINCT is.participant FROM IndividualScore is WHERE is.review = :review AND is.project = :project")
     fun findDistinctParticipantsByReviewAndProject(
@@ -88,4 +107,19 @@ interface IndividualScoreRepository : JpaRepository<IndividualScore, UUID> {
         project: Project,
         course: Course
     )
+    
+    // Get distinct reviews for a participant in a specific course
+    @Query("SELECT DISTINCT s.review FROM IndividualScore s WHERE s.participant = :participant AND s.course = :course ORDER BY s.review.startDate")
+    fun findDistinctReviewsByParticipantAndCourse(
+        @Param("participant") participant: User,
+        @Param("course") course: Course
+    ): List<Review>
+    
+    // Get scores for a participant, review, and course
+    @Query("SELECT s FROM IndividualScore s WHERE s.participant = :participant AND s.review = :review AND s.course = :course")
+    fun findByParticipantAndReviewAndCourse(
+        @Param("participant") participant: User,
+        @Param("review") review: Review,
+        @Param("course") course: Course
+    ): List<IndividualScore>
 }

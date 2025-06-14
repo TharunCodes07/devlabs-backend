@@ -41,14 +41,13 @@ class CriterionController(
                 .body(mapOf("error" to "Failed to retrieve criteria: ${e.message}"))
         }
     }
-    
-    @DeleteMapping("/{id}")
+      @DeleteMapping("/{id}")
     fun deleteCriterion(
         @PathVariable id: UUID,
-        @RequestHeader("X-User-Id") userId: UUID
+        @RequestBody request: com.devlabs.devlabsbackend.criterion.domain.DTO.UserIdRequest
     ): ResponseEntity<Any> {
         return try {
-            criterionService.deleteCriterion(id, userId)
+            criterionService.deleteCriterion(id, request.userId)
             ResponseEntity.ok(mapOf("success" to true, "message" to "Criterion deleted successfully"))
         } catch (e: NotFoundException) {
             ResponseEntity.status(HttpStatus.NOT_FOUND)

@@ -135,12 +135,10 @@ class UserController (private val userService: UserService)
         } catch (e: Exception) {            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(mapOf("message" to "Failed to search students: ${e.message}"))
         }
-    }
-
-    @GetMapping("/faculty")
+    }    @GetMapping("/faculty")
     fun getAllFaculty(): ResponseEntity<Any> {
         return try {
-            val faculty = userService.getAllUsersByRole(Role.FACULTY, 0, Int.MAX_VALUE, "name", "asc")
+            val faculty = userService.getAllUsersByRole(Role.FACULTY)
             ResponseEntity.ok(faculty)
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

@@ -18,6 +18,7 @@ data class CreateProjectRequest(
 )
 
 data class UpdateProjectRequest(
+    val userId: UUID,
     val title: String? = null,
     val description: String? = null,
     val objectives: String? = null,

@@ -16,7 +16,12 @@ class Review (
     val id: UUID? = null,
     var name: String,
     var startDate: LocalDate,
-    var endDate: LocalDate,    @ManyToMany(fetch = FetchType.LAZY)
+    var endDate: LocalDate,
+    
+    @Column(name = "is_published")
+    var isPublished: Boolean = false,
+    
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "course_review",
         joinColumns = [JoinColumn(name = "review_id")],

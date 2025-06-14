@@ -18,6 +18,16 @@ The Evaluations System allows faculty members, administrators, and managers to r
 - **Admin/Manager**: Can evaluate any project across all courses and publish/unpublish reviews
 - **Students**: Can only view their own scores for published reviews
 
+### Automatic Role Detection
+
+The system automatically determines the user's role and permissions based on the provided user ID:
+
+1. The user ID is included in each request body as a field (`userId`)
+2. The backend retrieves the user's role (ADMIN, MANAGER, FACULTY, or STUDENT)
+3. For faculty users, the system also identifies which courses they teach
+4. Based on this information, the system enforces appropriate access controls
+5. No explicit role information needs to be passed in API requests
+
 ## Publication Workflow
 
 Reviews follow a publication workflow:
@@ -27,6 +37,64 @@ Reviews follow a publication workflow:
 
 Only admins and managers can publish or unpublish reviews.
 
+### Publication API Endpoints
+
+**Get Publication Status:**
+
+```
+GET /api/review/{reviewId}/publication
+```
+
+Request Body:
+
+```json
+{
+  "userId": "UUID"
+}
+```
+
+Response:
+
+```json
+{
+  "reviewId": "UUID",
+  "reviewName": "String",
+  "isPublished": "Boolean",
+  "publishDate": "YYYY-MM-DD", // if published
+  "canPublish": "Boolean" // true for admin/manager
+}
+```
+
+**Publish Review (Admin/Manager only):**
+
+```
+POST /api/review/{reviewId}/publish
+```
+
+Request Body:
+
+```json
+{
+  "userId": "UUID"
+}
+```
+
+**Unpublish Review (Admin/Manager only):**
+
+```
+POST /api/review/{reviewId}/unpublish
+```
+
+Request Body:
+
+```json
+{
+  "userId": "UUID"
+}
+```
+
+The system automatically checks the user's role from the userId in the request body when handling publication requests.
+
 ## Main Features
 
 ### 1. Available Evaluations List
@@ -34,11 +102,13 @@ Only admins and managers can publish or unpublish reviews.
 This page shows evaluations available to the current user.
 
 #### API Endpoint
+
 ```
 POST /api/individualScore/evaluations/available
 ```
 
 #### Request Body
+
 ```json
 {
   "userId": "UUID",
@@ -46,7 +116,14 @@ POST /api/individualScore/evaluations/available
 }
 ```
 
+The system will automatically determine:
+
+- For faculty: Only evaluations for courses they teach
+- For admin/manager: All evaluations across courses
+- For students: Only their own evaluations in published reviews
+
 #### Response
+
 ```json
 {
   "evaluations": [
@@ -68,6 +145,7 @@ POST /api/individualScore/evaluations/available
 ```
 
 #### UI Components
+
 - Filter by semester (optional)
 - Sortable columns (by reviewName, projectTitle, courseName, startDate, endDate)
 - Status indicator showing if evaluation has been completed
@@ -79,19 +157,46 @@ This page allows users to submit scores for individual students in a project tea
 
 #### API Endpoints
 
-**Get Project Team Members and Criteria:**
+**Get Course Evaluation Data:**
+
 ```
-GET /api/individualScore/review/{reviewId}/project/{projectId}/course/{courseId}
+GET /api/individualScore/review/{reviewId}/project/{projectId}/course/{courseId}/data
 ```
 
+Request Body:
+
+```json
+{
+  "userId": "UUID"
+}
+```
+
+This returns the `CourseEvaluationData` object containing team members, criteria, and any existing scores.
+
+The system will automatically:
+
+- Verify the user has access to the requested course
+- For faculty: Only allow access to courses they teach
+- For admin/manager: Allow access to all courses
+- For students: Only allow access to their own evaluations in published reviews
+
 **Submit Course-specific Scores:**
+
 ```
 POST /api/individualScore/course
 ```
 
+The system will use the authenticated user's ID from the request body to:
+
+- Validate permissions based on user role
+- Check course teaching assignments for faculty users
+- Record the evaluator ID with the submitted scores
+
 #### Request Body for Submission
+
 ```json
 {
+  "userId": "UUID",
   "reviewId": "UUID",
   "projectId": "UUID",
   "courseId": "UUID",
@@ -111,6 +216,7 @@ POST /api/individualScore/course
 ```
 
 #### UI Components
+
 - Tabbed interface to switch between team members
 - Grid with criteria rows and score input columns
 - Comment fields for each criterion
@@ -123,11 +229,21 @@ POST /api/individualScore/course
 This page shows a summary of all evaluations for a project across different courses.
 
 #### API Endpoint
+
 ```
 GET /api/individualScore/review/{reviewId}/project/{projectId}/summary
 ```
 
+Request Body:
+
+```json
+{
+  "userId": "UUID"
+}
+```
+
 #### Response
+
 ```json
 {
   "reviewId": "UUID",
@@ -148,6 +264,7 @@ GET /api/individualScore/review/{reviewId}/project/{projectId}/summary
 ```
 
 #### UI Components
+
 - Project details header
 - List of courses with evaluation status
 - Links to view detailed evaluations for each course
@@ -158,11 +275,21 @@ GET /api/individualScore/review/{reviewId}/project/{projectId}/summary
 This page shows evaluation details for a specific student.
 
 #### API Endpoint
+
 ```
 GET /api/individualScore/review/{reviewId}/project/{projectId}/course/{courseId}/participant/{participantId}
 ```
 
+Request Body:
+
+```json
+{
+  "userId": "UUID"
+}
+```
+
 #### Response
+
 ```json
 {
   "participantId": "UUID",
@@ -183,6 +310,7 @@ GET /api/individualScore/review/{reviewId}/project/{projectId}/course/{courseId}
 ```
 
 #### UI Components
+
 - Student information header
 - Table of criteria, scores, and comments
 - Visual indicators of performance (progress bars, color coding)
@@ -200,11 +328,13 @@ GET /api/individualScore/review/{reviewId}/project/{projectId}/course/{courseId}
 ## States and Transitions
 
 ### Evaluation States
+
 - **Not Started**: No scores have been submitted yet
 - **In Progress**: Some scores have been submitted but not for all team members
 - **Complete**: Scores have been submitted for all team members
 
 ### Time-based States
+
 - **Upcoming**: Review start date is in the future
 - **Active**: Current date is between review start and end dates
 - **Expired**: Review end date has passed
@@ -233,10 +363,12 @@ GET /api/individualScore/review/{reviewId}/project/{projectId}/course/{courseId}
 ## Technical Notes
 
 ### Data Refreshing
+
 - Implement automatic saving of form data to prevent loss of work
 - Add "last updated" timestamps to show evaluation recency
 
 ### Performance Considerations
+
 - Implement pagination for lists with many evaluations
 - Use client-side caching for frequently accessed data
 - Lazy load team member data when switching tabs
@@ -249,11 +381,20 @@ When viewing a project's details, you can fetch associated reviews using:
 GET /projects/{projectId}/reviews
 ```
 
+Request Body:
+
+```json
+{
+  "userId": "UUID"
+}
+```
+
 This returns:
+
 ```json
 {
   "hasReview": "Boolean",
-  "assignmentType": "String", 
+  "assignmentType": "String",
   "liveReviews": ["ReviewResponse"],
   "upcomingReviews": ["ReviewResponse"],
   "completedReviews": ["ReviewResponse"]
@@ -261,6 +402,7 @@ This returns:
 ```
 
 Where `assignmentType` is one of:
+
 - "DIRECT": Project directly assigned to review
 - "COURSE": Project's course assigned to review
 - "BATCH": Project's team members' batch assigned to review
@@ -275,11 +417,18 @@ To get a list of active projects that can be reviewed:
 GET /projects/active
 ```
 
-This endpoint supports pagination with query parameters:
-- `page`: Page number (zero-based, default: 0)
-- `size`: Number of items per page (default: 10)
+Request Body:
+
+```json
+{
+  "userId": "UUID",
+  "page": 0, // optional, zero-based, default: 0
+  "size": 10 // optional, default: 10
+}
+```
 
 Response:
+
 ```json
 {
   "content": [
@@ -289,9 +438,7 @@ Response:
       "description": "String",
       "status": "String",
       "team": { "id": "UUID", "name": "String" },
-      "courses": [
-        { "id": "UUID", "name": "String", "code": "String" }
-      ]
+      "courses": [{ "id": "UUID", "name": "String", "code": "String" }]
     }
   ],
   "totalElements": "Number",
@@ -303,9 +450,69 @@ Response:
 
 ## API Details
 
+### Course Evaluation Data
+
+When working with course-specific evaluations, the system provides detailed data through this endpoint:
+
+```
+GET /api/individualScore/review/{reviewId}/project/{projectId}/course/{courseId}/data
+```
+
+Request Body:
+
+```json
+{
+  "userId": "UUID"
+}
+```
+
+Response:
+
+```json
+{
+  "courseId": "UUID",
+  "courseName": "String",
+  "projectId": "UUID",
+  "reviewId": "UUID",
+  "teamMembers": [
+    {
+      "id": "UUID",
+      "name": "String",
+      "email": "String",
+      "role": "String"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "UUID",
+      "name": "String",
+      "description": "String",
+      "maxScore": "Number",
+      "courseSpecific": "Boolean"
+    }
+  ],
+  "existingScores": [
+    {
+      "participantId": "UUID",
+      "criterionScores": [
+        {
+          "criterionId": "UUID",
+          "score": "Number",
+          "comment": "String"
+        }
+      ]
+    }
+  ],
+  "isPublished": "Boolean"
+}
+```
+
+Use this data to populate the evaluation form for a specific course, showing team members, criteria, and any existing scores.
+
 ### Common Response Structure
 
 All API responses follow this general pattern:
+
 - Success responses: HTTP 200/201 with data
 - Error responses: Appropriate HTTP status code with error object:
   ```json
@@ -316,10 +523,21 @@ All API responses follow this general pattern:
 
 ### Authentication Requirements
 
-All API calls require authentication. Include the user's ID in the request header:
+All API calls require the user ID to be included in the request body:
+
+```json
+{
+  "userId": "UUID"
+  // other request parameters
+}
 ```
-X-User-Id: UUID
-```
+
+This user ID is used to:
+
+1. Determine the user's role (ADMIN, MANAGER, FACULTY, or STUDENT)
+2. Filter available evaluations based on role and course assignments
+3. Enforce access control restrictions
+4. Track who submitted or modified evaluations
 
 ## Implementation Timeline Recommendations
 
@@ -343,6 +561,7 @@ X-User-Id: UUID
 ## Appendix: Data Structures
 
 ### Review
+
 ```typescript
 interface Review {
   id: string;
@@ -356,6 +575,7 @@ interface Review {
 ```
 
 ### Criterion
+
 ```typescript
 interface Criterion {
   id: string;
@@ -367,6 +587,7 @@ interface Criterion {
 ```
 
 ### ParticipantScore
+
 ```typescript
 interface ParticipantScore {
   participantId: string;
@@ -381,6 +602,7 @@ interface CriterionScore {
 ```
 
 ### CourseEvaluationInfo
+
 ```typescript
 interface CourseEvaluationInfo {
   reviewId: string;
@@ -396,7 +618,41 @@ interface CourseEvaluationInfo {
 }
 ```
 
+### CourseEvaluationData
+
+```typescript
+interface CourseEvaluationData {
+  courseId: string;
+  courseName: string;
+  projectId: string;
+  reviewId: string;
+  teamMembers: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  }[];
+  criteria: {
+    id: string;
+    name: string;
+    description: string;
+    maxScore: number;
+    courseSpecific: boolean;
+  }[];
+  existingScores?: {
+    participantId: string;
+    criterionScores: {
+      criterionId: string;
+      score: number;
+      comment?: string;
+    }[];
+  }[];
+  isPublished: boolean;
+}
+```
+
 ### Review Publication
+
 ```typescript
 interface ReviewPublicationStatus {
   reviewId: string;
@@ -406,6 +662,16 @@ interface ReviewPublicationStatus {
   publishedBy?: {
     id: string;
     name: string;
+    role: string;
   };
+}
+
+// Response when checking if a review is published
+interface ReviewPublicationResponse {
+  reviewId: string;
+  reviewName: string;
+  isPublished: boolean;
+  publishDate?: string; // YYYY-MM-DD
+  canPublish: boolean; // True for admin/manager roles only
 }
 ```

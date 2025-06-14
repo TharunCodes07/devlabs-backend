@@ -1,5 +1,6 @@
 package com.devlabs.devlabsbackend.individualscore.service
 
+import com.devlabs.devlabsbackend.batch.repository.BatchRepository
 import com.devlabs.devlabsbackend.core.exception.ForbiddenException
 import com.devlabs.devlabsbackend.core.exception.NotFoundException
 import com.devlabs.devlabsbackend.course.repository.CourseRepository
@@ -7,9 +8,14 @@ import com.devlabs.devlabsbackend.criterion.repository.CriterionRepository
 import com.devlabs.devlabsbackend.individualscore.domain.DTO.*
 import com.devlabs.devlabsbackend.individualscore.domain.IndividualScore
 import com.devlabs.devlabsbackend.individualscore.repository.IndividualScoreRepository
+import com.devlabs.devlabsbackend.project.domain.Project
 import com.devlabs.devlabsbackend.project.repository.ProjectRepository
+import com.devlabs.devlabsbackend.review.domain.Review
 import com.devlabs.devlabsbackend.review.repository.ReviewRepository
+import com.devlabs.devlabsbackend.rubrics.domain.Rubrics
+import com.devlabs.devlabsbackend.semester.repository.SemesterRepository
 import com.devlabs.devlabsbackend.user.domain.Role
+import com.devlabs.devlabsbackend.user.domain.User
 import com.devlabs.devlabsbackend.user.repository.UserRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -22,7 +28,9 @@ class IndividualScoreService(
     private val projectRepository: ProjectRepository,
     private val userRepository: UserRepository,
     private val criterionRepository: CriterionRepository,
-    private val courseRepository: CourseRepository
+    private val courseRepository: CourseRepository,
+    private val batchRepository: BatchRepository,
+    private val semesterRepository: SemesterRepository
 ) {
     
     @Transactional
@@ -34,13 +42,12 @@ class IndividualScoreService(
         val review = reviewRepository.findById(request.reviewId).orElseThrow {
             NotFoundException("Review with id ${request.reviewId} not found")
         }
-        
-        val project = projectRepository.findById(request.projectId).orElseThrow {
+          val project = projectRepository.findById(request.projectId).orElseThrow {
             NotFoundException("Project with id ${request.projectId} not found")
         }
         
         // Check if project is part of the review
-        if (!review.projects.contains(project)) {
+        if (!isProjectAssociatedWithReview(review, project)) {
             throw IllegalArgumentException("Project is not part of this review")
         }
         
@@ -135,13 +142,12 @@ class IndividualScoreService(
         val project = projectRepository.findById(request.projectId).orElseThrow {
             NotFoundException("Project with id ${request.projectId} not found")
         }
-        
-        val course = courseRepository.findById(request.courseId).orElseThrow {
+          val course = courseRepository.findById(request.courseId).orElseThrow {
             NotFoundException("Course with id ${request.courseId} not found")
         }
         
         // Check if project is part of the review
-        if (!review.projects.contains(project)) {
+        if (!isProjectAssociatedWithReview(review, project)) {
             throw IllegalArgumentException("Project is not part of this review")
         }
         
@@ -225,7 +231,7 @@ class IndividualScoreService(
     }
     
     @Transactional(readOnly = true)
-    fun getScoresForParticipant(reviewId: UUID, projectId: UUID, participantId: UUID): ParticipantScoresSummary {
+    fun getScoresForParticipant(reviewId: UUID, projectId: UUID, participantId: UUID, requesterId: UUID? = null): ParticipantScoresSummary {
         val review = reviewRepository.findById(reviewId).orElseThrow {
             NotFoundException("Review with id $reviewId not found")
         }
@@ -233,19 +239,23 @@ class IndividualScoreService(
         val project = projectRepository.findById(projectId).orElseThrow {
             NotFoundException("Project with id $projectId not found")
         }
-        
-        val participant = userRepository.findById(participantId).orElseThrow {
+          val participant = userRepository.findById(participantId).orElseThrow {
             NotFoundException("Participant with id $participantId not found")
         }
         
         // Check if project is part of the review
-        if (!review.projects.contains(project)) {
+        if (!isProjectAssociatedWithReview(review, project)) {
             throw IllegalArgumentException("Project is not part of this review")
         }
         
         // Check if participant is member of the project team
         if (!project.team.members.contains(participant)) {
             throw IllegalArgumentException("Participant is not a member of this project team")
+        }
+        
+        // Check access rights if requester ID is provided
+        if (requesterId != null) {
+            checkScoreAccessRights(requesterId, review, project, participantId)
         }
         
         // Get all criteria for this review
@@ -291,13 +301,12 @@ class IndividualScoreService(
         val review = reviewRepository.findById(reviewId).orElseThrow {
             NotFoundException("Review with id $reviewId not found")
         }
-        
-        val project = projectRepository.findById(projectId).orElseThrow {
+          val project = projectRepository.findById(projectId).orElseThrow {
             NotFoundException("Project with id $projectId not found")
         }
         
         // Check if project is part of the review
-        if (!review.projects.contains(project)) {
+        if (!isProjectAssociatedWithReview(review, project)) {
             throw IllegalArgumentException("Project is not part of this review")
         }
         
@@ -323,13 +332,12 @@ class IndividualScoreService(
         val project = projectRepository.findById(projectId).orElseThrow {
             NotFoundException("Project with id $projectId not found")
         }
-        
-        val participant = userRepository.findById(participantId).orElseThrow {
+          val participant = userRepository.findById(participantId).orElseThrow {
             NotFoundException("Participant with id $participantId not found")
         }
         
         // Check if project is part of the review
-        if (!review.projects.contains(project)) {
+        if (!isProjectAssociatedWithReview(review, project)) {
             throw IllegalArgumentException("Project is not part of this review")
         }
         
@@ -503,13 +511,12 @@ class IndividualScoreService(
         val participant = userRepository.findById(participantId).orElseThrow {
             NotFoundException("Participant with id $participantId not found")
         }
-        
-        val course = courseRepository.findById(courseId).orElseThrow {
+          val course = courseRepository.findById(courseId).orElseThrow {
             NotFoundException("Course with id $courseId not found")
         }
         
         // Check if project is part of the review
-        if (!review.projects.contains(project)) {
+        if (!isProjectAssociatedWithReview(review, project)) {
             throw IllegalArgumentException("Project is not part of this review")
         }
         
@@ -573,13 +580,12 @@ class IndividualScoreService(
         val project = projectRepository.findById(projectId).orElseThrow {
             NotFoundException("Project with id $projectId not found")
         }
-        
-        val course = courseRepository.findById(courseId).orElseThrow {
+          val course = courseRepository.findById(courseId).orElseThrow {
             NotFoundException("Course with id $courseId not found")
         }
         
         // Check if project is part of the review
-        if (!review.projects.contains(project)) {
+        if (!isProjectAssociatedWithReview(review, project)) {
             throw IllegalArgumentException("Project is not part of this review")
         }
         
@@ -599,23 +605,23 @@ class IndividualScoreService(
     
     /**
      * Get evaluation summary by course for a project
-     */
-    @Transactional(readOnly = true)
+     */    @Transactional(readOnly = true)
     fun getProjectEvaluationSummary(reviewId: UUID, projectId: UUID): ProjectEvaluationSummary {
         val review = reviewRepository.findById(reviewId).orElseThrow {
             NotFoundException("Review with id $reviewId not found")
         }
-        
-        val project = projectRepository.findById(projectId).orElseThrow {
+          val project = projectRepository.findById(projectId).orElseThrow {
             NotFoundException("Project with id $projectId not found")
         }
         
         // Check if project is part of the review
-        if (!review.projects.contains(project)) {
+        if (!isProjectAssociatedWithReview(review, project)) {
             throw IllegalArgumentException("Project is not part of this review")
         }
         
-        val courseEvaluations = project.courses.map { course ->
+        // Eagerly fetch the courses to avoid lazy loading issues
+        val courses = project.courses.toList()
+          val courseEvaluations = courses.map { course ->
             val hasScores = individualScoreRepository.findByReviewAndProjectAndCourse(
                 review, project, course
             ).isNotEmpty()
@@ -623,7 +629,12 @@ class IndividualScoreService(
             CourseEvaluationSummary(
                 courseId = course.id!!,
                 courseName = course.name,
-                instructors = course.instructors.map { it.name },
+                instructors = course.instructors.map { instructor ->
+                    InstructorInfo(
+                        id = instructor.id!!,
+                        name = instructor.name
+                    )
+                },
                 hasEvaluation = hasScores,
                 evaluationCount = if (hasScores) {
                     individualScoreRepository.findDistinctParticipantsByReviewAndProjectAndCourse(
@@ -669,13 +680,12 @@ class IndividualScoreService(
         val participant = userRepository.findById(participantId).orElseThrow {
             NotFoundException("Participant with id $participantId not found")
         }
-        
-        val course = courseRepository.findById(courseId).orElseThrow {
+          val course = courseRepository.findById(courseId).orElseThrow {
             NotFoundException("Course with id $courseId not found")
         }
         
         // Check if project is part of the review
-        if (!review.projects.contains(project)) {
+        if (!isProjectAssociatedWithReview(review, project)) {
             throw IllegalArgumentException("Project is not part of this review")
         }
         
@@ -699,5 +709,330 @@ class IndividualScoreService(
         )
         
         return true
+    }
+    
+    /**
+     * Check if user has access to view scores based on role and review publication status
+     * This method is used by controllers to enforce access control
+     */
+    fun checkScoreAccessRights(userId: UUID, review: Review, project: Project, participantId: UUID? = null) {
+        val user = userRepository.findById(userId).orElseThrow {
+            NotFoundException("User with id $userId not found")
+        }
+        
+        // Admins and Managers always have access
+        if (user.role == Role.ADMIN || user.role == Role.MANAGER) {
+            return
+        }
+        
+        // Faculty access check - must be teaching the course
+        if (user.role == Role.FACULTY) {
+            val isInstructorOfProjectCourse = project.courses.any { course ->
+                course.instructors.contains(user)
+            }
+            
+            if (!isInstructorOfProjectCourse) {
+                throw ForbiddenException("Faculty can only view scores for projects in their courses")
+            }
+            return
+        }
+        
+        // Student access check - must be the participant and review must be published
+        if (user.role == Role.STUDENT) {
+            // Check if review is published
+            if (!review.isPublished) {
+                throw ForbiddenException("Students can only view scores for published reviews")
+            }
+            
+            // Check if student is viewing their own scores
+            if (participantId != null && participantId != user.id) {
+                throw ForbiddenException("Students can only view their own scores")
+            }
+            
+            // Check if student is a member of the project team
+            if (!project.team.members.contains(user)) {
+                throw ForbiddenException("Students can only view scores for projects they are part of")
+            }
+            
+            return
+        }
+        
+        // If we get here, access is denied
+        throw ForbiddenException("Unauthorized access to scores")
+    }
+    
+    /**
+     * Get a student's own scores for a specific review and project
+     */
+    @Transactional(readOnly = true)
+    fun getStudentScores(reviewId: UUID, projectId: UUID, studentId: UUID): ParticipantScoresSummary {
+        val review = reviewRepository.findById(reviewId).orElseThrow {
+            NotFoundException("Review with id $reviewId not found")
+        }
+        
+        val project = projectRepository.findById(projectId).orElseThrow {
+            NotFoundException("Project with id $projectId not found")
+        }
+        
+        // Verify access rights
+        checkScoreAccessRights(studentId, review, project, studentId)
+        
+        // Get the student
+        val student = userRepository.findById(studentId).orElseThrow {
+            NotFoundException("Student with id $studentId not found")
+        }
+        
+        // Get scores
+        val scores = individualScoreRepository.findByParticipantAndReviewAndProject(student, review, project)
+        
+        // Convert to response format
+        return createParticipantScoresSummary(student, scores, review.rubrics!!)
+    }
+    
+    private fun createParticipantScoresSummary(
+        participant: User,
+        scores: List<IndividualScore>,
+        rubrics: Rubrics
+    ): ParticipantScoresSummary {
+        // Map scores by criterion ID for quick lookup
+        val scoresMap = scores.associateBy { it.criterion.id }
+        
+        // Build response with scores for each criterion
+        val criterionScores = rubrics.criteria.map { criterion ->
+            val score = scoresMap[criterion.id]
+            CriterionScoreDetail(
+                criterionId = criterion.id!!,
+                criterionName = criterion.name,
+                maxScore = criterion.maxScore.toDouble(),
+                score = score?.score ?: 0.0,
+                comment = score?.comment
+            )
+        }
+        
+        // Calculate total score and percentage
+        val totalScore = criterionScores.sumOf { it.score }
+        val maxPossibleScore = rubrics.criteria.sumOf { it.maxScore.toDouble() }
+        val percentage = if (maxPossibleScore > 0) (totalScore / maxPossibleScore) * 100 else 0.0
+        
+        return ParticipantScoresSummary(
+            participantId = participant.id!!,
+            participantName = participant.name,
+            criterionScores = criterionScores,
+            totalScore = totalScore,
+            maxPossibleScore = maxPossibleScore,
+            percentage = percentage
+        )
+    }
+    
+    /**
+     * Comprehensive check to determine if a project is associated with a review
+     * through any valid relationship (direct, course, batch, or semester)
+     */
+    private fun isProjectAssociatedWithReview(review: Review, project: Project): Boolean {
+        // Initialize project relationships to avoid lazy loading issues
+        project.courses.size
+        project.team.members.size
+        
+        // 1. Check for direct project assignment
+        if (review.projects.any { it.id == project.id }) {
+            return true
+        }
+        
+        // 2. Check for course-based assignment
+        val projectCourses = project.courses
+        if (projectCourses.isNotEmpty()) {
+            // Check for direct course-review relationship
+            if (review.courses.any { reviewCourse -> 
+                projectCourses.any { projectCourse -> projectCourse.id == reviewCourse.id } 
+            }) {
+                return true
+            }
+        }
+        
+        // 3. Check for batch-based assignment (through team members)
+        val teamMembers = project.team.members
+        if (teamMembers.isNotEmpty()) {
+            // Get all batches that contain any of the team members
+            val memberBatches = mutableSetOf<com.devlabs.devlabsbackend.batch.domain.Batch>()
+            teamMembers.forEach { member ->
+                val batches = batchRepository.findByStudentsContaining(member)
+                memberBatches.addAll(batches)
+            }
+            
+            if (memberBatches.isNotEmpty()) {
+                // Check for reviews directly assigned to these batches
+                if (review.batches.any { batch -> memberBatches.any { it.id == batch.id } }) {
+                    return true
+                }
+                
+                // Check for reviews assigned to courses that include these batches
+                val allCourses = courseRepository.findAll()
+                val batchCourses = allCourses.filter { course ->
+                    course.batches.any { batch -> memberBatches.any { it.id == batch.id } }
+                }
+                
+                if (batchCourses.isNotEmpty()) {
+                    if (review.courses.any { course -> batchCourses.any { it.id == course.id } }) {
+                        return true
+                    }
+                }
+            }
+        }
+        
+        // 4. Check for semester-based assignment
+        val semesters = mutableSetOf<UUID>()
+        
+        // Get semesters from project courses
+        projectCourses.forEach { course ->
+            course.semester.id?.let { semesters.add(it) }
+        }
+        
+        // Get semesters from team member batches
+        teamMembers.forEach { member ->
+            val batches = batchRepository.findByStudentsContaining(member)
+            batches.forEach { batch ->
+                batch.semester.forEach { semester ->
+                    semester.id?.let { semesters.add(it) }
+                }
+            }
+        }
+        
+        if (semesters.isNotEmpty()) {
+            val semesterEntities = semesterRepository.findAllByIdWithCourses(semesters.toList())
+            semesterEntities.forEach { semester ->
+                // Get all courses in this semester
+                val semesterCourses = semester.courses
+                
+                // Find reviews assigned to courses in this semester
+                if (review.courses.any { course -> semesterCourses.any { it.id == course.id } }) {
+                    return true
+                }
+                
+                // Find reviews assigned to batches in this semester
+                val semesterBatches = semester.batches
+                if (review.batches.any { batch -> semesterBatches.any { it.id == batch.id } }) {
+                    return true
+                }
+            }
+        }
+          return false
+    }
+
+    /**
+     * Get comprehensive course evaluation data including team members, criteria, and existing scores
+     */
+    @Transactional(readOnly = true)
+    fun getCourseEvaluationData(reviewId: UUID, projectId: UUID, courseId: UUID, userId: UUID): CourseEvaluationData {
+        val user = userRepository.findById(userId).orElseThrow {
+            NotFoundException("User with id $userId not found")
+        }
+        
+        val review = reviewRepository.findById(reviewId).orElseThrow {
+            NotFoundException("Review with id $reviewId not found")
+        }
+        
+        val project = projectRepository.findById(projectId).orElseThrow {
+            NotFoundException("Project with id $projectId not found")
+        }
+        
+        val course = courseRepository.findById(courseId).orElseThrow {
+            NotFoundException("Course with id $courseId not found")
+        }
+        
+        // Check if project is part of the review
+        if (!isProjectAssociatedWithReview(review, project)) {
+            throw IllegalArgumentException("Project is not part of this review")
+        }
+        
+        // Check if course is associated with the project
+        if (!project.courses.contains(course)) {
+            throw IllegalArgumentException("Course is not associated with this project")
+        }
+        
+        // Check user access permissions
+        checkCourseEvaluationAccess(user, review, project, course)
+        
+        // Get team members
+        val teamMembers = project.team.members.map { member ->
+            TeamMemberInfo(
+                id = member.id!!,
+                name = member.name,
+                email = member.email,
+                role = member.role.name
+            )
+        }
+        
+        // Get criteria from review rubrics
+        val criteria = review.rubrics?.criteria?.map { criterion ->
+            CriterionInfo(
+                id = criterion.id!!,
+                name = criterion.name,
+                description = criterion.description,
+                maxScore = criterion.maxScore.toDouble(),
+                courseSpecific = true // All criteria in course evaluations are course-specific
+            )
+        } ?: emptyList()
+        
+        // Get existing scores for this review, project, and course
+        val existingScores = project.team.members.mapNotNull { member ->
+            val scores = individualScoreRepository.findByParticipantAndReviewAndProjectAndCourse(
+                member, review, project, course
+            )
+            
+            if (scores.isNotEmpty()) {
+                ParticipantScoreData(
+                    participantId = member.id!!,
+                    criterionScores = scores.map { score ->
+                        CriterionScoreData(
+                            criterionId = score.criterion.id!!,
+                            score = score.score,
+                            comment = score.comment
+                        )
+                    }
+                )
+            } else {
+                null
+            }
+        }
+        
+        return CourseEvaluationData(
+            courseId = course.id!!,
+            courseName = course.name,
+            projectId = project.id!!,
+            reviewId = review.id!!,
+            teamMembers = teamMembers,
+            criteria = criteria,
+            existingScores = existingScores,
+            isPublished = review.isPublished ?: false
+        )
+    }
+    
+    /**
+     * Check if user has access to course evaluation data
+     */
+    private fun checkCourseEvaluationAccess(user: User, review: Review, project: Project, course: com.devlabs.devlabsbackend.course.domain.Course) {
+        when (user.role) {
+            Role.ADMIN, Role.MANAGER -> {
+                // Admins and managers have access to all evaluations
+                return
+            }
+            Role.FACULTY -> {
+                // Faculty can only access courses they teach
+                if (!course.instructors.contains(user)) {
+                    throw ForbiddenException("Faculty can only access evaluations for courses they teach")
+                }
+            }
+            Role.STUDENT -> {
+                // Students can only access their own evaluations in published reviews
+                if (review.isPublished != true) {
+                    throw ForbiddenException("Students can only access published reviews")
+                }
+                
+                // Check if student is a member of the project team
+                if (!project.team.members.contains(user)) {
+                    throw ForbiddenException("Students can only access their own project evaluations")
+                }
+            }
+        }
     }
 }

@@ -7,11 +7,13 @@ Successfully implemented a course-specific evaluation system where faculty can o
 ## Key Changes Made
 
 ### 1. Enhanced IndividualScore Entity
+
 - **File**: `src/main/kotlin/com/devlabs/devlabsbackend/individualscore/domain/IndividualScore.kt`
 - **Changes**: Added optional `course` field with `@ManyToOne` relationship to Course entity
 - **Purpose**: Enables course-specific score storage
 
 ### 2. Updated IndividualScoreRepository
+
 - **File**: `src/main/kotlin/com/devlabs/devlabsbackend/individualscore/repository/IndividualScoreRepository.kt`
 - **New Methods**:
   - `findByParticipantAndCriterionAndReviewAndProjectAndCourse()` - Find course-specific scores
@@ -20,6 +22,7 @@ Successfully implemented a course-specific evaluation system where faculty can o
   - `deleteByParticipantAndReviewAndProjectAndCourse()` - Delete course-specific scores
 
 ### 3. Enhanced DTOs
+
 - **File**: `src/main/kotlin/com/devlabs/devlabsbackend/individualscore/domain/DTO/ScoreDTO.kt`
 - **New DTOs**:
   - `SubmitCourseScoreRequest` - Submit scores for a specific course
@@ -29,6 +32,7 @@ Successfully implemented a course-specific evaluation system where faculty can o
   - `AvailableEvaluationRequest/Response` - Get available evaluations for faculty
 
 ### 4. Enhanced IndividualScoreService
+
 - **File**: `src/main/kotlin/com/devlabs/devlabsbackend/individualscore/service/IndividualScoreService.kt`
 - **New Methods**:
   - `submitCourseScores()` - Faculty submit scores for courses they teach
@@ -39,6 +43,7 @@ Successfully implemented a course-specific evaluation system where faculty can o
   - `deleteCourseScoresForParticipant()` - Delete course-specific scores with permissions
 
 ### 5. New Controller Endpoints
+
 - **File**: `src/main/kotlin/com/devlabs/devlabsbackend/individualscore/controller/IndividualScoreController.kt`
 - **New Endpoints**:
   - `POST /api/individual-score/course` - Submit course-specific scores
@@ -47,22 +52,26 @@ Successfully implemented a course-specific evaluation system where faculty can o
   - `DELETE /api/individual-score/review/{reviewId}/project/{projectId}/course/{courseId}/participant/{participantId}` - Delete course-specific scores
 
 ### 6. Fixed Review Assignment Detection
+
 - **File**: `src/main/kotlin/com/devlabs/devlabs-backend/review/repository/ReviewRepository.kt`
 - **Changes**: Added `findAllWithAssociations()` and `findByCourses()` methods
 - **Purpose**: Eager loading to prevent LazyInitializationException in review assignment checks
 
 ### 7. Database Migration
+
 - **File**: `add-course-to-individual-score.sql`
 - **Purpose**: Adds `course_id` column to `individual_score` table with proper indexes
 
 ## Permission System
 
 ### Faculty Permissions
+
 - Can only submit/view/delete scores for courses they teach
 - Cannot access scores for courses they don't instruct
 - Can see their available evaluations across all their courses
 
 ### Admin/Manager Permissions
+
 - Can submit/view/delete scores for any course
 - Can see all available evaluations
 - Have full access to all evaluation functions
@@ -70,6 +79,7 @@ Successfully implemented a course-specific evaluation system where faculty can o
 ## Key Features
 
 ### Course-Specific Evaluation Workflow
+
 1. Faculty logs in and requests available evaluations
 2. System returns only evaluations for courses they teach
 3. Faculty selects a project and course combination
@@ -77,11 +87,13 @@ Successfully implemented a course-specific evaluation system where faculty can o
 5. Scores are stored with course association
 
 ### Backward Compatibility
+
 - Existing scores (without course association) remain unchanged
 - New course-specific scores have `course_id` populated
 - Both systems can coexist during transition
 
 ### Data Integrity
+
 - Foreign key constraints ensure data consistency
 - Proper indexing for performance
 - Validation prevents invalid course associations
@@ -89,6 +101,7 @@ Successfully implemented a course-specific evaluation system where faculty can o
 ## API Usage Examples
 
 ### 1. Get Available Evaluations for Faculty
+
 ```http
 POST /api/individual-score/evaluations/available
 Content-Type: application/json
@@ -99,6 +112,7 @@ Content-Type: application/json
 ```
 
 ### 2. Submit Course-Specific Scores
+
 ```http
 POST /api/individual-score/course
 Content-Type: application/json
@@ -106,7 +120,7 @@ X-User-Id: faculty-uuid-here
 
 {
   "reviewId": "review-uuid",
-  "projectId": "project-uuid", 
+  "projectId": "project-uuid",
   "courseId": "course-uuid",
   "scores": [
     {
@@ -124,6 +138,7 @@ X-User-Id: faculty-uuid-here
 ```
 
 ### 3. Get Course-Specific Scores
+
 ```http
 GET /api/individual-score/review/{reviewId}/project/{projectId}/course/{courseId}/participant/{participantId}
 ```
@@ -131,16 +146,18 @@ GET /api/individual-score/review/{reviewId}/project/{projectId}/course/{courseId
 ## Database Migration Instructions
 
 1. **Run the migration script**:
+
    ```sql
    -- Execute the contents of add-course-to-individual-score.sql
    -- This adds course_id column and indexes to individual_score table
    ```
 
 2. **Verify migration**:
+
    ```sql
    -- Check if column was added
    DESCRIBE individual_score;
-   
+
    -- Check indexes
    SHOW INDEX FROM individual_score;
    ```
@@ -148,16 +165,19 @@ GET /api/individual-score/review/{reviewId}/project/{projectId}/course/{courseId
 ## Testing Strategy
 
 ### 1. Unit Tests
+
 - Test course permission validation
 - Test score submission with course association
 - Test retrieval of course-specific scores
 
 ### 2. Integration Tests
+
 - Test faculty can only access their courses
 - Test admin/manager can access all courses
 - Test backward compatibility with existing scores
 
 ### 3. API Tests
+
 - Test all new endpoints with different user roles
 - Test permission enforcement
 - Test error handling for invalid course associations

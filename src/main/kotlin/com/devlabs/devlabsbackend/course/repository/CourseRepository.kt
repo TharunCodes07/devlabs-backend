@@ -15,18 +15,33 @@ interface CourseRepository : JpaRepository<Course, UUID> {
     
     @Query("SELECT c FROM Course c WHERE c.semester.isActive = true")
     fun findCoursesByActiveSemesters(pageable: Pageable): Page<Course>
-    
-    @Query("SELECT c FROM Course c WHERE c.semester.isActive = true AND :instructor MEMBER OF c.instructors")
+      @Query("SELECT c FROM Course c WHERE c.semester.isActive = true AND :instructor MEMBER OF c.instructors")
     fun findCoursesByActiveSemestersAndInstructor(@Param("instructor") instructor: User, pageable: Pageable): Page<Course>
-      @Query("SELECT c FROM Course c WHERE c.semester.isActive = true AND (LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(c.code) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(c.description) LIKE LOWER(CONCAT('%', :query, '%')))")
+    
+    // Non-paginated method for active courses for an instructor
+    @Query("SELECT c FROM Course c WHERE c.semester.isActive = true AND :instructor MEMBER OF c.instructors")
+    fun findCoursesByActiveSemestersAndInstructor(@Param("instructor") instructor: User): List<Course>
+    
+    @Query("SELECT c FROM Course c WHERE c.semester.isActive = true AND (LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(c.code) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(c.description) LIKE LOWER(CONCAT('%', :query, '%')))")
     fun searchCoursesByActiveSemesters(@Param("query") query: String, pageable: Pageable): Page<Course>
     
     @Query("SELECT c FROM Course c WHERE c.semester.isActive = true AND :instructor MEMBER OF c.instructors AND (LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(c.code) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(c.description) LIKE LOWER(CONCAT('%', :query, '%')))")
-    fun searchCoursesByActiveSemestersAndInstructor(@Param("instructor") instructor: User, @Param("query") query: String, pageable: Pageable): Page<Course>
-    
-    @Query("SELECT c FROM Course c WHERE c.semester.isActive = true AND :student MEMBER OF c.students")
+    fun searchCoursesByActiveSemestersAndInstructor(@Param("instructor") instructor: User, @Param("query") query: String, pageable: Pageable): Page<Course>    @Query("SELECT c FROM Course c WHERE c.semester.isActive = true AND :student MEMBER OF c.students")
     fun findCoursesByActiveSemestersAndStudent(@Param("student") student: User, pageable: Pageable): Page<Course>
-      // Non-paginated method for active courses (for dropdowns)
+    
+    // Non-paginated method for active courses for a student
+    @Query("SELECT c FROM Course c WHERE c.semester.isActive = true AND :student MEMBER OF c.students")
+    fun findCoursesByActiveSemestersAndStudent(@Param("student") student: User): List<Course>
+    
+    // Find courses by active semesters and student through batch assignment
+    @Query("SELECT DISTINCT c FROM Course c JOIN c.batches b JOIN b.students s WHERE c.semester.isActive = true AND s = :student")
+    fun findCoursesByActiveSemestersAndStudentThroughBatch(@Param("student") student: User): List<Course>
+    
+    // Paginated version for finding courses by active semesters and student through batch assignment
+    @Query("SELECT DISTINCT c FROM Course c JOIN c.batches b JOIN b.students s WHERE c.semester.isActive = true AND s = :student")
+    fun findCoursesByActiveSemestersAndStudentThroughBatch(@Param("student") student: User, pageable: Pageable): Page<Course>
+      
+    // Non-paginated method for active courses (for dropdowns)
     @Query("SELECT c FROM Course c WHERE c.semester.isActive = true")
     fun findCoursesByActiveSemesters(): List<Course>
       // Find courses by semester

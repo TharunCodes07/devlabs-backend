@@ -88,4 +88,27 @@ interface ProjectRepository : JpaRepository<Project, UUID> {
     @Query("SELECT DISTINCT p FROM Project p JOIN p.courses c JOIN c.batches b WHERE p.status IN (com.devlabs.devlabsbackend.project.domain.ProjectStatus.ONGOING, com.devlabs.devlabsbackend.project.domain.ProjectStatus.PROPOSED) AND b.id = :batchId")
     fun findActiveProjectsByBatch(@Param("batchId") batchId: UUID): List<Project>
     
+    // Find completed projects for faculty (courses they have taught)
+    @Query("SELECT DISTINCT p FROM Project p JOIN p.courses c JOIN c.instructors i WHERE p.status = com.devlabs.devlabsbackend.project.domain.ProjectStatus.COMPLETED AND i = :faculty")
+    fun findCompletedProjectsByFaculty(@Param("faculty") faculty: com.devlabs.devlabsbackend.user.domain.User, pageable: Pageable): Page<Project>
+    
+    // Find completed projects for students (projects they were team members of)
+    @Query("SELECT DISTINCT p FROM Project p JOIN p.team t JOIN t.members m WHERE p.status = com.devlabs.devlabsbackend.project.domain.ProjectStatus.COMPLETED AND m = :student")
+    fun findCompletedProjectsByStudent(@Param("student") student: com.devlabs.devlabsbackend.user.domain.User, pageable: Pageable): Page<Project>
+    
+    // Find all completed projects (for admin/manager)
+    fun findByStatusOrderByUpdatedAtDesc(status: ProjectStatus, pageable: Pageable): Page<Project>
+    
+    // Search completed projects for faculty
+    @Query("SELECT DISTINCT p FROM Project p JOIN p.courses c JOIN c.instructors i WHERE p.status = com.devlabs.devlabsbackend.project.domain.ProjectStatus.COMPLETED AND i = :faculty AND LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%'))")
+    fun searchCompletedProjectsByFaculty(@Param("faculty") faculty: com.devlabs.devlabsbackend.user.domain.User, @Param("query") query: String, pageable: Pageable): Page<Project>
+    
+    // Search completed projects for students
+    @Query("SELECT DISTINCT p FROM Project p JOIN p.team t JOIN t.members m WHERE p.status = com.devlabs.devlabsbackend.project.domain.ProjectStatus.COMPLETED AND m = :student AND LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%'))")
+    fun searchCompletedProjectsByStudent(@Param("student") student: com.devlabs.devlabsbackend.user.domain.User, @Param("query") query: String, pageable: Pageable): Page<Project>
+    
+    // Search all completed projects (for admin/manager)
+    @Query("SELECT p FROM Project p WHERE p.status = com.devlabs.devlabsbackend.project.domain.ProjectStatus.COMPLETED AND LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) ORDER BY p.updatedAt DESC")
+    fun searchCompletedProjects(@Param("query") query: String, pageable: Pageable): Page<Project>
+    
 }
