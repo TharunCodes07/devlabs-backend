@@ -42,10 +42,20 @@ data class ReviewResponse(
     val name: String,
     val startDate: LocalDate,
     val endDate: LocalDate,
+    val isPublished: Boolean,
+    val publishedAt: LocalDate?,
+    val createdBy: CreatedByInfo,
     val courses: List<CourseInfo>,
     val projects: List<ProjectInfo>,
     val sections: List<String>,
     val rubricsInfo: RubricInfo,
+)
+
+data class CreatedByInfo(
+    val id: UUID,
+    val name: String,
+    val email: String,
+    val role: String
 )
 
 data class ProjectInfo(

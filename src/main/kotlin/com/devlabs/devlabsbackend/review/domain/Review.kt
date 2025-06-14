@@ -4,8 +4,10 @@ import com.devlabs.devlabsbackend.batch.domain.Batch
 import com.devlabs.devlabsbackend.course.domain.Course
 import com.devlabs.devlabsbackend.project.domain.Project
 import com.devlabs.devlabsbackend.rubrics.domain.Rubrics
+import com.devlabs.devlabsbackend.user.domain.User
 import jakarta.persistence.*
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.*
 
 @Entity
@@ -20,6 +22,13 @@ class Review (
     
     @Column(name = "is_published")
     var isPublished: Boolean = false,
+    
+    @Column(name = "published_at")
+    var publishedAt: LocalDateTime? = null,
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_id")
+    var createdBy: User,
     
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(

@@ -17,8 +17,7 @@ import java.util.*
 class ReviewPublicationController(
     private val reviewService: ReviewService,
     private val userRepository: UserRepository
-) {
-      @GetMapping("/{reviewId}/publication")
+) {      @GetMapping("/{reviewId}/publication")
     fun getPublicationStatus(
         @PathVariable reviewId: UUID,
         @RequestBody request: UserIdRequest
@@ -28,14 +27,21 @@ class ReviewPublicationController(
                 NotFoundException("User with id ${request.userId} not found")
             }
               val publicationStatus = reviewService.getPublicationStatus(reviewId)
+            val review = reviewService.getReviewById(reviewId)
             
-            // Create a new response with canPublish flag based on user role
+            // Check if user can publish based on role and ownership
+            val canPublish = when (user.role) {
+                Role.ADMIN, Role.MANAGER -> true
+                Role.FACULTY -> review.createdBy.id == user.id
+                else -> false
+            }
+            
             val responseWithPermission = ReviewPublicationResponse(
                 reviewId = publicationStatus.reviewId,
                 reviewName = publicationStatus.reviewName,
                 isPublished = publicationStatus.isPublished,
                 publishDate = publicationStatus.publishDate,
-                canPublish = user.role == Role.ADMIN || user.role == Role.MANAGER
+                canPublish = canPublish
             )
             
             ResponseEntity.ok(responseWithPermission)

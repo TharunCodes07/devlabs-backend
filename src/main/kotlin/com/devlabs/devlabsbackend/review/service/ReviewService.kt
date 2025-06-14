@@ -24,6 +24,7 @@ import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.*
 
 @Service
@@ -60,13 +61,13 @@ class ReviewService(
         if (user.role == Role.FACULTY && !request.courseIds.isNullOrEmpty()) {
             validateFacultyCoursesAccess(user, request.courseIds)
         }
-        
-        // Create the review
+          // Create the review
         val review = Review(
             name = request.name,
             startDate = request.startDate,
             endDate = request.endDate,
-            rubrics = rubrics
+            rubrics = rubrics,
+            createdBy = user
         )
           // Save the review first to get an ID
         val savedReview = reviewRepository.save(review)
@@ -115,12 +116,20 @@ class ReviewService(
         val review = reviewRepository.findById(reviewId).orElseThrow {
             NotFoundException("Review with id $reviewId not found")
         }
-        
-        // Check permission to update this review
-        if (user.role == Role.FACULTY) {
-            validateFacultyReviewAccess(user, review)
-        } else if (user.role != Role.ADMIN && user.role != Role.MANAGER) {
-            throw ForbiddenException("Only admin, manager, or faculty can update reviews")
+          // Check permission to update this review
+        when (user.role) {
+            Role.ADMIN, Role.MANAGER -> {
+                // Admins and managers can update any review
+            }            Role.FACULTY -> {
+                // Faculty can only update reviews they created
+                // Handle legacy reviews without createdBy (treat as forbidden for faculty)
+                if (review.createdBy?.id != user.id) {
+                    throw ForbiddenException("You can only update reviews that you created")
+                }
+            }
+            else -> {
+                throw ForbiddenException("You don't have permission to update reviews")
+            }
         }
         
         // Update basic properties
@@ -180,11 +189,13 @@ class ReviewService(
         return reviewRepository.save(review)
     }
     
-    @Transactional(readOnly = true)
-    fun getReviewById(reviewId: UUID): Review {
-        return reviewRepository.findById(reviewId).orElseThrow {
+    @Transactional(readOnly = true)    fun getReviewById(reviewId: UUID): Review {
+        val review = reviewRepository.findById(reviewId).orElseThrow {
             NotFoundException("Review with id $reviewId not found")
         }
+        // Ensure createdBy is loaded to avoid lazy loading issues
+        review.createdBy.name
+        return review
     }
     
     @Transactional(readOnly = true)
@@ -365,12 +376,20 @@ class ReviewService(
         val review = reviewRepository.findById(reviewId).orElseThrow {
             NotFoundException("Review with id $reviewId not found")
         }
-        
-        // Check permission to delete this review
-        if (user.role == Role.FACULTY) {
-            validateFacultyReviewAccess(user, review)
-        } else if (user.role != Role.ADMIN && user.role != Role.MANAGER) {
-            throw ForbiddenException("Only admin, manager, or faculty can delete reviews")
+          // Check permission to delete this review
+        when (user.role) {
+            Role.ADMIN, Role.MANAGER -> {
+                // Admins and managers can delete any review
+            }            Role.FACULTY -> {
+                // Faculty can only delete reviews they created
+                // Handle legacy reviews without createdBy (treat as forbidden for faculty)
+                if (review.createdBy?.id != user.id) {
+                    throw ForbiddenException("You can only delete reviews that you created")
+                }
+            }
+            else -> {
+                throw ForbiddenException("You don't have permission to delete reviews")
+            }
         }
         
         // Remove associations
@@ -382,8 +401,7 @@ class ReviewService(
         reviewRepository.delete(review)
         return true
     }
-    
-    /**
+      /**
      * Get the publication status of a review
      */
     @Transactional(readOnly = true)
@@ -396,43 +414,57 @@ class ReviewService(
             reviewId = review.id!!,
             reviewName = review.name,
             isPublished = review.isPublished,
-            publishDate = null // We'll add this in a future update if needed
+            publishDate = review.publishedAt?.toLocalDate()
         )
     }
-    
+
     /**
-     * Publish a review - only accessible to ADMIN and MANAGER roles
-     */
-    @Transactional
+     * Publish a review - accessible to ADMIN and MANAGER (any review) and FACULTY (own reviews only)
+     */    @Transactional
     fun publishReview(reviewId: UUID, userId: UUID): ReviewPublicationResponse {
         // Validate user permissions
         val user = userRepository.findById(userId).orElseThrow {
             NotFoundException("User with id $userId not found")
         }
         
-        // Only Admin and Manager can publish reviews
-        if (user.role != Role.ADMIN && user.role != Role.MANAGER) {
-            throw ForbiddenException("Only admin or manager can publish reviews")
-        }
-        
         val review = reviewRepository.findById(reviewId).orElseThrow {
             NotFoundException("Review with id $reviewId not found")
+        }
+          // Check authorization - Admin and Manager can access anything
+        when (user.role) {
+            Role.ADMIN, Role.MANAGER -> {
+                // Admins and managers can publish any review
+            }
+            Role.FACULTY -> {
+                // Faculty can only publish reviews they created
+                // Handle legacy reviews without createdBy (treat as forbidden for faculty)
+                if (review.createdBy?.id != user.id) {
+                    throw ForbiddenException("You can only publish reviews that you created")
+                }
+            }
+            else -> {
+                throw ForbiddenException("You don't have permission to publish reviews")
+            }
+        }
+        
+        if (review.isPublished) {
+            throw IllegalArgumentException("Review is already published")
         }
         
         // Update publication status
         review.isPublished = true
+        review.publishedAt = LocalDateTime.now()
         val updatedReview = reviewRepository.save(review)
         
         return ReviewPublicationResponse(
             reviewId = updatedReview.id!!,
             reviewName = updatedReview.name,
             isPublished = updatedReview.isPublished,
-            publishDate = LocalDate.now() // Current date as publish date
+            publishDate = updatedReview.publishedAt?.toLocalDate()
         )
     }
-    
-    /**
-     * Unpublish a review - only accessible to ADMIN and MANAGER roles
+      /**
+     * Unpublish a review - accessible to ADMIN and MANAGER (any review) and FACULTY (own reviews only)
      */
     @Transactional
     fun unpublishReview(reviewId: UUID, userId: UUID): ReviewPublicationResponse {
@@ -441,24 +473,40 @@ class ReviewService(
             NotFoundException("User with id $userId not found")
         }
         
-        // Only Admin and Manager can unpublish reviews
-        if (user.role != Role.ADMIN && user.role != Role.MANAGER) {
-            throw ForbiddenException("Only admin or manager can unpublish reviews")
-        }
-        
         val review = reviewRepository.findById(reviewId).orElseThrow {
             NotFoundException("Review with id $reviewId not found")
         }
         
+        // Check authorization - Admin and Manager can access anything
+        when (user.role) {
+            Role.ADMIN, Role.MANAGER -> {
+                // Admins and managers can unpublish any review
+            }            Role.FACULTY -> {
+                // Faculty can only unpublish reviews they created
+                // Handle legacy reviews without createdBy (treat as forbidden for faculty)
+                if (review.createdBy?.id != user.id) {
+                    throw ForbiddenException("You can only unpublish reviews that you created")
+                }
+            }
+            else -> {
+                throw ForbiddenException("You don't have permission to unpublish reviews")
+            }
+        }
+        
+        if (!review.isPublished) {
+            throw IllegalArgumentException("Review is already unpublished")
+        }
+        
         // Update publication status
         review.isPublished = false
+        review.publishedAt = null
         val updatedReview = reviewRepository.save(review)
         
         return ReviewPublicationResponse(
             reviewId = updatedReview.id!!,
             reviewName = updatedReview.name,
             isPublished = updatedReview.isPublished,
-            publishDate = null // Remove publish date when unpublishing
+            publishDate = updatedReview.publishedAt?.toLocalDate()
         )
     }
     
@@ -473,16 +521,7 @@ class ReviewService(
             }
         }
     }
-    
-    private fun validateFacultyReviewAccess(faculty: User, review: Review) {
-        val hasAccess = review.courses.any { course ->
-            course.instructors.contains(faculty)
-        }
-        
-        if (!hasAccess) {
-            throw ForbiddenException("Faculty can only update reviews for their courses")
-        }
-    }    @Transactional
+      @Transactional
     private fun addCoursesToReview(review: Review, courseIds: List<UUID>, user: User) {
         val courses = courseRepository.findAllByIdWithSemester(courseIds)
         
@@ -887,8 +926,7 @@ class ReviewService(
             hasReview = foundReviews.isNotEmpty(),
             assignmentType = assignmentType,
             liveReviews = liveReviews.map { it.toReviewResponse() },
-            upcomingReviews = upcomingReviews.map { it.toReviewResponse() },
-            completedReviews = completedReviews.map { it.toReviewResponse() }
+            upcomingReviews = upcomingReviews.map { it.toReviewResponse() },            completedReviews = completedReviews.map { it.toReviewResponse() }
         )
     }
 }
@@ -911,6 +949,21 @@ fun Review.toReviewResponse(): ReviewResponse {
         name = this.name,
         startDate = this.startDate,
         endDate = this.endDate,
+        isPublished = this.isPublished,
+        publishedAt = this.publishedAt?.toLocalDate(),
+        createdBy = this.createdBy?.let { creator ->
+            CreatedByInfo(
+                id = creator.id!!,
+                name = creator.name,
+                email = creator.email,
+                role = creator.role.name
+            )
+        } ?: CreatedByInfo(
+            id = UUID.fromString("00000000-0000-0000-0000-000000000000"),
+            name = "Unknown",
+            email = "unknown@example.com",
+            role = "UNKNOWN"
+        ),
         courses = this.courses.map { 
             CourseInfo(
                 id = it.id!!,
@@ -955,12 +1008,3 @@ fun Review.toReviewResponse(): ReviewResponse {
         } ?: throw IllegalStateException("Review must have rubrics")
     )
 }
-
-/**
- * Data class to represent the response for review publication status
- */
-data class ReviewPublicationResponse(
-    val reviewId: UUID,
-    val reviewName: String,    val isPublished: Boolean,
-    val publishDate: LocalDate?
-)
