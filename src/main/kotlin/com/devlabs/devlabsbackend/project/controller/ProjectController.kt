@@ -1,0 +1,218 @@
+package com.devlabs.devlabsbackend.project.controller
+
+import com.devlabs.devlabsbackend.core.exception.NotFoundException
+import com.devlabs.devlabsbackend.project.domain.DTO.CreateProjectRequest
+import com.devlabs.devlabsbackend.project.domain.DTO.UpdateProjectRequest
+import com.devlabs.devlabsbackend.project.domain.DTO.UserIdRequest
+import com.devlabs.devlabsbackend.project.domain.DTO.toProjectResponse
+import com.devlabs.devlabsbackend.project.service.ProjectService
+import com.devlabs.devlabsbackend.review.service.ReviewService
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.*
+import java.util.*
+
+@RestController
+@RequestMapping("/projects")
+class ProjectController(
+    private val projectService: ProjectService,
+    private val reviewService: ReviewService
+) {
+
+    @PostMapping
+    fun createProject(@RequestBody request: CreateProjectRequest): ResponseEntity<Any> {
+        return try {
+            val project = projectService.createProject(request)
+            ResponseEntity.status(HttpStatus.CREATED).body(project.toProjectResponse())
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to create project: ${e.message}"))
+        }
+    }
+
+    @GetMapping("/team/{teamId}")
+    fun getProjectsByTeam(
+        @PathVariable teamId: UUID,
+        @RequestParam(required = false, defaultValue = "0") page: Int,
+        @RequestParam(required = false, defaultValue = "10") size: Int
+    ): ResponseEntity<Any> {
+        return try {
+            val projects = projectService.getProjectsByTeam(teamId, page, size)
+            ResponseEntity.ok(projects)
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to get projects by team: ${e.message}"))
+        }
+    }
+
+    @GetMapping("/{projectId}")
+    fun getProjectById(@PathVariable projectId: UUID): ResponseEntity<Any> {
+        return try {
+            val project = projectService.getProjectById(projectId)
+            ResponseEntity.ok(project.toProjectResponse())
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to get project: ${e.message}"))
+        }
+    }
+
+    @GetMapping("/course/{courseId}")
+    fun getProjectsByCourse(
+        @PathVariable courseId: UUID,
+        @RequestParam(required = false, defaultValue = "0") page: Int,
+        @RequestParam(required = false, defaultValue = "10") size: Int,
+        @RequestParam(required = false, defaultValue = "title") sortBy: String,
+        @RequestParam(required = false, defaultValue = "asc") sortOrder: String
+    ): ResponseEntity<Any> {
+        return try {
+            val projects = projectService.getProjectsByCourse(courseId, page, size, sortBy, sortOrder)
+            ResponseEntity.ok(projects)
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to get projects by course: ${e.message}"))
+        }
+    }
+
+    @PutMapping("/{projectId}")
+    fun updateProject(
+        @PathVariable projectId: UUID,
+        @RequestBody request: UpdateProjectRequest
+    ): ResponseEntity<Any> {
+        return try {
+            val project = projectService.updateProject(projectId, request, request.userId)
+            ResponseEntity.ok(project.toProjectResponse())
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to update project: ${e.message}"))
+        }
+    }
+
+    @DeleteMapping("/{projectId}")
+    fun deleteProject(
+        @PathVariable projectId: UUID,
+        @RequestBody request: UserIdRequest
+    ): ResponseEntity<Any> {
+        return try {
+            projectService.deleteProject(projectId, request.userId)
+            ResponseEntity.ok(mapOf("success" to true, "message" to "Project deleted successfully"))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to delete project: ${e.message}"))
+        }
+    }
+
+
+    @GetMapping("/active")
+    fun getAllActiveProjects(): ResponseEntity<Any> {
+        return try {
+            val projects = projectService.getAllActiveProjects()
+            ResponseEntity.ok(projects)
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to retrieve active projects: ${e.message}"))
+        }
+    }
+
+    @GetMapping("/user/{userId}/course/{courseId}")
+    fun getProjectsForUserByCourse(
+        @PathVariable userId: String,
+        @PathVariable courseId: UUID,
+        @RequestParam(required = false, defaultValue = "0") page: Int,
+        @RequestParam(required = false, defaultValue = "10") size: Int
+    ): ResponseEntity<Any> {
+        return try {
+            val projects = projectService.getProjectsForUserByCourse(userId, courseId, page, size)
+            ResponseEntity.ok(projects)
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to get projects for user by course: ${e.message}"))
+        }
+    }
+
+    @GetMapping("/user/{userId}")
+    fun getProjectsForUser(
+        @PathVariable userId: String,
+        @RequestParam(required = false, defaultValue = "0") page: Int,
+        @RequestParam(required = false, defaultValue = "10") size: Int
+    ): ResponseEntity<Any> {
+        return try {
+            val projects = projectService.getProjectsForUser(userId, page, size)
+            ResponseEntity.ok(projects)
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to get projects for user: ${e.message}"))
+        }
+    }
+
+    @GetMapping("/course/{courseId}/search/{userId}")
+    fun searchProjectsByCourseForUser(
+        @PathVariable courseId: UUID,
+        @PathVariable userId: String,
+        @RequestParam query: String,
+        @RequestParam(required = false, defaultValue = "0") page: Int,
+        @RequestParam(required = false, defaultValue = "10") size: Int
+    ): ResponseEntity<Any> {
+        return try {
+            val projects = projectService.searchProjectsByCourseForUser(userId, courseId, query, page, size)
+            ResponseEntity.ok(projects)
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to search projects for course: ${e.message}"))
+        }
+    }
+
+
+    @GetMapping("/semester/{semesterId}/active")
+    fun getActiveProjectsBySemester(@PathVariable semesterId: UUID): ResponseEntity<Any> {
+        return try {
+            val projects = projectService.getActiveProjectsBySemester(semesterId)
+            ResponseEntity.ok(projects)
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to retrieve active projects for semester: ${e.message}"))
+        }
+    }
+
+    @GetMapping("/batch/{batchId}/active")
+    fun getActiveProjectsByBatch(@PathVariable batchId: UUID): ResponseEntity<Any> {
+        return try {
+            val projects = projectService.getActiveProjectsByBatch(batchId)
+            ResponseEntity.ok(projects)
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to retrieve active projects for batch: ${e.message}"))
+        }
+    }
+
+}
