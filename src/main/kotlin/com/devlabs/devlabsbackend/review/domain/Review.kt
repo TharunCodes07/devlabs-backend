@@ -57,4 +57,6 @@ class Review (
         inverseJoinColumns = [JoinColumn(name = "project_id")]
     )
     val projects: MutableSet<Project> = mutableSetOf(),
+
+    var files: MutableSet<String> = mutableSetOf()
 )

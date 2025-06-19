@@ -246,4 +246,48 @@ class ReviewController(
         }
     }
 
+    data class FileBodyRequest(
+        val url: String
+    )
+
+    @PostMapping("/{reviewId}/add-file")
+    fun addFileToReview(
+        @PathVariable reviewId: UUID,
+        @RequestBody request: FileBodyRequest
+    ): ResponseEntity<Any> {
+        return try {
+            val file = reviewService.addFileToReview(reviewId, request.url)
+            ResponseEntity.ok(file)
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: ForbiddenException) {
+            ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to add file to review: ${e.message}"))
+        }
+    }
+
+    @DeleteMapping("/{reviewId}/remove-file")
+    fun removeFileFromReview(
+        @PathVariable reviewId: UUID,
+        @RequestBody request: FileBodyRequest
+    ): ResponseEntity<Any> {
+        return try {
+            val result = reviewService.removeFileFromReview(reviewId, request.url)
+            ResponseEntity.ok(mapOf("success" to result))
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: ForbiddenException) {
+            ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to remove file from review: ${e.message}"))
+        }
+    }
+
 }

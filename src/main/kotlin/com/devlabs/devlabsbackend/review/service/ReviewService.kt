@@ -122,13 +122,16 @@ class ReviewService(
         when (user.role) {
             Role.ADMIN, Role.MANAGER -> {
                 // Admins and managers can update any review
-            }            Role.FACULTY -> {
-            // Faculty can only update reviews they created
-            // Handle legacy reviews without createdBy (treat as forbidden for faculty)
-            if (review.createdBy?.id != user.id) {
-                throw ForbiddenException("You can only update reviews that you created")
             }
-        }
+
+            Role.FACULTY -> {
+                // Faculty can only update reviews they created
+                // Handle legacy reviews without createdBy (treat as forbidden for faculty)
+                if (review.createdBy?.id != user.id) {
+                    throw ForbiddenException("You can only update reviews that you created")
+                }
+            }
+
             else -> {
                 throw ForbiddenException("You don't have permission to update reviews")
             }
@@ -189,7 +192,9 @@ class ReviewService(
         }
 
         return reviewRepository.save(review)
-    }    @Transactional(readOnly = true)
+    }
+
+    @Transactional(readOnly = true)
     fun getReviewById(reviewId: UUID): ReviewResponse {
         val review = reviewRepository.findById(reviewId).orElseThrow {
             NotFoundException("Review with id $reviewId not found")
@@ -199,7 +204,12 @@ class ReviewService(
     }
 
     @Transactional(readOnly = true)
-    fun getAllReviews(page: Int = 0, size: Int = 10, sortBy: String = "startDate", sortOrder: String = "desc"): PaginatedResponse<ReviewResponse> {
+    fun getAllReviews(
+        page: Int = 0,
+        size: Int = 10,
+        sortBy: String = "startDate",
+        sortOrder: String = "desc"
+    ): PaginatedResponse<ReviewResponse> {
         val direction = if (sortOrder.uppercase() == "ASC") Sort.Direction.ASC else Sort.Direction.DESC
         val sort = Sort.by(direction, sortBy)
         val pageable = PageRequest.of(page, size, sort)
@@ -232,14 +242,17 @@ class ReviewService(
                 // Admins and managers can see all reviews
                 reviewRepository.findAll(pageable)
             }
+
             Role.FACULTY -> {
                 // Faculty can only see reviews for their courses
                 reviewRepository.findByCoursesInstructorsContaining(user, pageable)
             }
+
             Role.STUDENT -> {
                 // Students can see reviews for projects they're part of
                 reviewRepository.findByProjectsTeamMembersContaining(user, pageable)
             }
+
             else -> {
                 Page.empty(pageable)
             }
@@ -283,7 +296,8 @@ class ReviewService(
         val today = LocalDate.now()
         val pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "endDate"))
 
-        val reviewsPage = reviewRepository.findByStartDateLessThanEqualAndEndDateGreaterThanEqual(today, today, pageable)
+        val reviewsPage =
+            reviewRepository.findByStartDateLessThanEqualAndEndDateGreaterThanEqual(today, today, pageable)
 
         val reviewResponses = reviewsPage.content.map { it.toReviewResponse() }
 
@@ -329,14 +343,17 @@ class ReviewService(
                 // Admins and managers can see all reviews
                 reviewRepository.findAll(Sort.by(Sort.Direction.DESC, "startDate"))
             }
+
             Role.FACULTY -> {
                 // Faculty can only see reviews for their courses
                 reviewRepository.findAllByCourseInstructorsContaining(user)
             }
+
             Role.STUDENT -> {
                 // Students can see reviews for projects they're part of
                 reviewRepository.findAllByProjectTeamMembersContaining(user)
             }
+
             else -> {
                 emptyList()
             }
@@ -380,13 +397,16 @@ class ReviewService(
         when (user.role) {
             Role.ADMIN, Role.MANAGER -> {
                 // Admins and managers can delete any review
-            }            Role.FACULTY -> {
-            // Faculty can only delete reviews they created
-            // Handle legacy reviews without createdBy (treat as forbidden for faculty)
-            if (review.createdBy?.id != user.id) {
-                throw ForbiddenException("You can only delete reviews that you created")
             }
-        }
+
+            Role.FACULTY -> {
+                // Faculty can only delete reviews they created
+                // Handle legacy reviews without createdBy (treat as forbidden for faculty)
+                if (review.createdBy?.id != user.id) {
+                    throw ForbiddenException("You can only delete reviews that you created")
+                }
+            }
+
             else -> {
                 throw ForbiddenException("You don't have permission to delete reviews")
             }
@@ -401,6 +421,7 @@ class ReviewService(
         reviewRepository.delete(review)
         return true
     }
+
     /**
      * Get the publication status of a review
      */
@@ -420,7 +441,8 @@ class ReviewService(
 
     /**
      * Publish a review - accessible to ADMIN and MANAGER (any review) and FACULTY (own reviews only)
-     */    @Transactional
+     */
+    @Transactional
     fun publishReview(reviewId: UUID, userId: String): ReviewPublicationResponse {
         // Validate user permissions
         val user = userRepository.findById(userId).orElseThrow {
@@ -435,6 +457,7 @@ class ReviewService(
             Role.ADMIN, Role.MANAGER -> {
                 // Admins and managers can publish any review
             }
+
             Role.FACULTY -> {
                 // Faculty can only publish reviews they created
                 // Handle legacy reviews without createdBy (treat as forbidden for faculty)
@@ -442,6 +465,7 @@ class ReviewService(
                     throw ForbiddenException("You can only publish reviews that you created")
                 }
             }
+
             else -> {
                 throw ForbiddenException("You don't have permission to publish reviews")
             }
@@ -463,6 +487,7 @@ class ReviewService(
             publishDate = updatedReview.publishedAt?.toLocalDate()
         )
     }
+
     /**
      * Unpublish a review - accessible to ADMIN and MANAGER (any review) and FACULTY (own reviews only)
      */
@@ -481,13 +506,16 @@ class ReviewService(
         when (user.role) {
             Role.ADMIN, Role.MANAGER -> {
                 // Admins and managers can unpublish any review
-            }            Role.FACULTY -> {
-            // Faculty can only unpublish reviews they created
-            // Handle legacy reviews without createdBy (treat as forbidden for faculty)
-            if (review.createdBy?.id != user.id) {
-                throw ForbiddenException("You can only unpublish reviews that you created")
             }
-        }
+
+            Role.FACULTY -> {
+                // Faculty can only unpublish reviews they created
+                // Handle legacy reviews without createdBy (treat as forbidden for faculty)
+                if (review.createdBy?.id != user.id) {
+                    throw ForbiddenException("You can only unpublish reviews that you created")
+                }
+            }
+
             else -> {
                 throw ForbiddenException("You don't have permission to unpublish reviews")
             }
@@ -521,6 +549,7 @@ class ReviewService(
             }
         }
     }
+
     @Transactional
     private fun addCoursesToReview(review: Review, courseIds: List<UUID>, user: User) {
         val courses = courseRepository.findAllByIdWithSemester(courseIds)
@@ -555,7 +584,7 @@ class ReviewService(
     }
 
     @Transactional
-    private fun  addProjectsToReview(review: Review, projectIds: List<UUID>, user: User) {
+    private fun addProjectsToReview(review: Review, projectIds: List<UUID>, user: User) {
         val projects = projectRepository.findAllById(projectIds)
 
         // Only include Live/Proposed projects
@@ -665,6 +694,7 @@ class ReviewService(
             }
         }
     }
+
     @Transactional(readOnly = true)
     fun searchReviews(
         userId: String,
@@ -693,14 +723,17 @@ class ReviewService(
                 // Admins and managers can see all reviews
                 reviewRepository.findAll().toList()
             }
+
             Role.FACULTY -> {
                 // Faculty can only see reviews for their courses
                 reviewRepository.findAllByCourseInstructorsContaining(user)
             }
+
             Role.STUDENT -> {
                 // Students can see reviews for projects they're part of
                 reviewRepository.findAllByProjectTeamMembersContaining(user)
             }
+
             else -> {
                 emptyList()
             }
@@ -730,12 +763,15 @@ class ReviewService(
                         it.startDate <= today && it.endDate >= today
                     }
                 }
+
                 "completed", "ended", "past" -> {
                     reviews.filter { it.endDate < today }
                 }
+
                 "upcoming", "future" -> {
                     reviews.filter { it.startDate > today }
                 }
+
                 else -> {
                     throw IllegalArgumentException("Invalid status: $status. Valid values: live, completed, upcoming")
                 }
@@ -766,12 +802,15 @@ class ReviewService(
                 total_count = total
             )
         )
-    }    /**
+    }
+
+    /**
      * Checks if a project has any reviews (direct or indirect) that are live or completed
      *
      * @param projectId The ID of the project to check
      * @return ReviewAssignmentResponse containing information about any assigned reviews
-     */    @Transactional(readOnly = true)
+     */
+    @Transactional(readOnly = true)
     fun checkProjectReviewAssignment(projectId: UUID): ReviewAssignmentResponse {
         println("=== DEBUG: Starting review assignment check for project $projectId ===")
 
@@ -950,7 +989,8 @@ class ReviewService(
             hasReview = foundReviews.isNotEmpty(),
             assignmentType = assignmentType,
             liveReviews = liveReviews.map { it.toReviewResponse() },
-            upcomingReviews = upcomingReviews.map { it.toReviewResponse() },            completedReviews = completedReviews.map { it.toReviewResponse() }
+            upcomingReviews = upcomingReviews.map { it.toReviewResponse() },
+            completedReviews = completedReviews.map { it.toReviewResponse() }
         )
     }
 
@@ -989,6 +1029,7 @@ class ReviewService(
                 // Faculty can view all results for projects in courses they teach
                 project.courses.any { course -> course.instructors.contains(user) }
             }
+
             Role.STUDENT -> {
                 // Students can only view results if published and they're part of the project
                 if (!review.isPublished) {
@@ -999,6 +1040,7 @@ class ReviewService(
                 }
                 false // Students can only see their own results
             }
+
             else -> throw ForbiddenException("Invalid user role")
         }
 
@@ -1130,7 +1172,44 @@ class ReviewService(
     }
 
     // ...existing code...
+
+    fun addFileToReview(
+        reviewId: UUID,
+        url: String,
+    ) {
+        val review = reviewRepository.findById(reviewId).orElseThrow {
+            NotFoundException("Review with id $reviewId not found")
+        }
+
+        // Validate URL format
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            throw IllegalArgumentException("Invalid URL format: $url")
+        }
+
+        // Add file URL to the review
+        review.files.add(url)
+        reviewRepository.save(review)
+    }
+
+    fun removeFileFromReview(
+        reviewId: UUID,
+        url: String,
+    ) {
+        val review = reviewRepository.findById(reviewId).orElseThrow {
+            NotFoundException("Review with id $reviewId not found")
+        }
+        // Validate URL format
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            throw IllegalArgumentException("Invalid URL format: $url")
+        }
+        // Remove file URL from the review
+        if (!review.files.remove(url)) {
+            throw IllegalArgumentException("File URL $url not found in review ${review.name}")
+        }
+        reviewRepository.save(review)
+    }
 }
+
 
 /**
  * Data class to represent the response for review assignment check
@@ -1205,6 +1284,7 @@ fun Review.toReviewResponse(): ReviewResponse {
                         isCommon = criterion.isCommon
                     )
                 }
-            )        } ?: throw IllegalStateException("Review must have rubrics")
+            )
+        } ?: throw IllegalStateException("Review must have rubrics")
     )
 }
