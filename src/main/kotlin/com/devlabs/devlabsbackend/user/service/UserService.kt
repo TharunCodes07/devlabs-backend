@@ -4,6 +4,7 @@ import com.devlabs.devlabsbackend.core.exception.NotFoundException
 import com.devlabs.devlabsbackend.core.pagination.PaginatedResponse
 import com.devlabs.devlabsbackend.core.pagination.PaginationInfo
 import com.devlabs.devlabsbackend.user.domain.DTO.CreateUserRequest
+import com.devlabs.devlabsbackend.user.domain.DTO.KeycloakSyncRequest
 import com.devlabs.devlabsbackend.user.domain.DTO.UpdateUserRequest
 import com.devlabs.devlabsbackend.user.domain.DTO.UserResponse
 import com.devlabs.devlabsbackend.user.domain.Role
@@ -120,13 +121,12 @@ class UserService(
         if (userRepository.existsByEmail(request.email)) {
             throw IllegalArgumentException("Email already exists")
         }
-
         try {
             val user = User(
                 name = request.name,
                 email = request.email,
                 role = Role.valueOf(request.role.uppercase()),
-                phoneNumber = request.phoneNumber,
+                phoneNumber = request.phoneNumber?.takeIf { it.isNotBlank() },
                 isActive = request.isActive,
                 createdAt = Timestamp.from(Instant.now())
             )
@@ -146,6 +146,48 @@ class UserService(
             NotFoundException("User with id $userId not found")
         }
         return user.toUserResponse()
+    }
+
+    fun checkUserExists(email: String): Boolean {
+        return userRepository.existsByEmail(email)
+    }    fun createUserFromKeycloakSync(request: KeycloakSyncRequest): UserResponse {
+        try {
+            // Check if user already exists
+            val existingUser = userRepository.findById(request.id).orElse(null)
+            
+            val user = if (existingUser != null) {
+                // Update existing user
+                existingUser.apply {
+                    name = request.name
+                    email = request.email
+                    role = Role.valueOf(request.role.trim().uppercase())
+                    phoneNumber = request.phoneNumber.takeIf { it.isNotBlank() }
+                    isActive = request.isActive
+                    // Don't update createdAt for existing users
+                }
+            } else {
+                // Create new user
+                User(
+                    id = request.id,
+                    name = request.name,
+                    email = request.email,
+                    role = Role.valueOf(request.role.trim().uppercase()),
+                    phoneNumber = request.phoneNumber.takeIf { it.isNotBlank() },
+                    isActive = request.isActive,
+                    createdAt = Timestamp.from(Instant.now())
+                )
+            }
+
+            val savedUser = userRepository.save(user)
+            return savedUser.toUserResponse()
+        } catch (e: IllegalArgumentException) {
+            if (e.message?.contains("No enum constant") == true) {
+                throw IllegalArgumentException("Invalid role: '${request.role}'. Valid roles are: ${Role.values().joinToString()}")
+            }
+            throw IllegalArgumentException("Invalid role: ${request.role}")
+        } catch (e: Exception) {
+            throw RuntimeException("Failed to sync user from Keycloak: ${e.message}")
+        }
     }
 
     private fun createSort(sortBy: String, sortOrder: String): Sort {

@@ -25,9 +25,13 @@ interface BatchRepository : JpaRepository<Batch, UUID>{
     fun searchByNameOrYearContainingIgnoreCase(@Param("query") query: String, pageable: Pageable): Page<Batch>    @Query("SELECT CASE WHEN COUNT(b) > 0 THEN true ELSE false END FROM Batch b WHERE :semester MEMBER OF b.semester")
     fun existsBySemester(@Param("semester") semester: com.devlabs.devlabsbackend.semester.domain.Semester): Boolean
 
-    override fun findAll(pageable: Pageable): Page<Batch>
-
-    fun findByStudentsContaining(student: User): List<Batch>
+    override fun findAll(pageable: Pageable): Page<Batch>    fun findByStudentsContaining(student: User): List<Batch>
 
     fun findByIsActiveTrue(): List<Batch>
+
+    @Query("SELECT u FROM Batch b JOIN b.students u WHERE b.id = :batchId")
+    fun findStudentsByBatchId(@Param("batchId") batchId: UUID, pageable: Pageable): Page<User>
+
+    @Query("SELECT u FROM Batch b JOIN b.students u WHERE b.id = :batchId AND (LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')))")
+    fun searchStudentsByBatchId(@Param("batchId") batchId: UUID, @Param("query") query: String, pageable: Pageable): Page<User>
 }

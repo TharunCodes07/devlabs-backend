@@ -8,6 +8,7 @@ import com.devlabs.devlabsbackend.review.domain.DTO.ReviewResultsRequest
 import com.devlabs.devlabsbackend.review.domain.DTO.UserIdRequest
 import com.devlabs.devlabsbackend.review.service.ReviewService
 import com.devlabs.devlabsbackend.review.service.toReviewResponse
+import com.devlabs.devlabsbackend.security.utils.SecurityUtils
 import com.devlabs.devlabsbackend.user.domain.Role
 import com.devlabs.devlabsbackend.user.repository.UserRepository
 import org.springframework.http.HttpStatus
@@ -105,13 +106,31 @@ class ReviewController(
                 .body(mapOf("error" to "Failed to get review results: ${e.message}"))
         }
     }
+    @GetMapping
+    fun getReviewsForUser(
+        @RequestParam(required = false, defaultValue = "0") page: Int,
+        @RequestParam(required = false, defaultValue = "10") size: Int,
+        @RequestParam(defaultValue = "startDate") sortBy: String,
+        @RequestParam(defaultValue = "desc") sortOrder: String
+    ): ResponseEntity<Any> {
+        return try {
+            val userId = SecurityUtils.getCurrentUserId()
+                ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(mapOf("error" to "User not authenticated"))
+            
+            val reviews = reviewService.getReviewsForUser(userId, page, size, sortBy, sortOrder)
+            ResponseEntity.ok(reviews)
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to get reviews: ${e.message}"))
+        }
+    }
 
-
-
-
-    @GetMapping("/search/{userId}")
+    @GetMapping("/search")
     fun searchReviews(
-        @PathVariable userId: String,
         @RequestParam(required = false) name: String?,
         @RequestParam(required = false) courseId: UUID?,
         @RequestParam(required = false) status: String?,
@@ -121,6 +140,10 @@ class ReviewController(
         @RequestParam(defaultValue = "desc") sortOrder: String
     ): ResponseEntity<Any> {
         return try {
+            val userId = SecurityUtils.getCurrentUserId()
+                ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(mapOf("error" to "User not authenticated"))
+            
             val reviews = reviewService.searchReviews(userId, name, courseId, status, page, size, sortBy, sortOrder)
             ResponseEntity.ok(reviews)
         } catch (e: NotFoundException) {
@@ -132,42 +155,7 @@ class ReviewController(
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(mapOf("error" to "Failed to search reviews: ${e.message}"))
-        }
-    }
-
-    @GetMapping("/user")
-    fun getReviewsForUser(
-        @RequestParam userId: String,
-        @RequestParam(required = false, defaultValue = "0") page: Int,
-        @RequestParam(required = false, defaultValue = "10") size: Int
-    ): ResponseEntity<Any> {
-        return try {
-            val reviews = reviewService.getReviewsForUser(userId, page, size)
-            ResponseEntity.ok(reviews)
-        } catch (e: NotFoundException) {
-            ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(mapOf("error" to e.message))
-        } catch (e: Exception) {
-            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(mapOf("error" to "Failed to get reviews: ${e.message}"))
-        }
-    }
-
-    @GetMapping
-    fun getAllReviews(
-        @RequestParam(required = false, defaultValue = "0") page: Int,
-        @RequestParam(required = false, defaultValue = "10") size: Int,
-        @RequestParam(required = false, defaultValue = "startDate") sortBy: String,
-        @RequestParam(required = false, defaultValue = "desc") sortOrder: String
-    ): ResponseEntity<Any> {
-        return try {
-            val reviews = reviewService.getAllReviews(page, size, sortBy, sortOrder)
-            ResponseEntity.ok(reviews)
-        } catch (e: Exception) {
-            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(mapOf("error" to "Failed to get reviews: ${e.message}"))
-        }
-    }
+        }    }
 
     @GetMapping("/{reviewId}/publication")
     fun getPublicationStatus(

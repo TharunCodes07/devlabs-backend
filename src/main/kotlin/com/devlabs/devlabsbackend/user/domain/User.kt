@@ -15,14 +15,13 @@ enum class Role {
 @Table(name = "\"user\"")
 class User (
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
     val id: String? = null,
     var name: String,
     var email: String,
     var profileId: String? = null,
-    var image: String? = null,
+    var image: String? = null,    
     var role: Role,
-    var phoneNumber: String,
+    var phoneNumber: String?,
     var isActive: Boolean = true,
     var createdAt: Timestamp = Timestamp.from(Instant.now()),
 )

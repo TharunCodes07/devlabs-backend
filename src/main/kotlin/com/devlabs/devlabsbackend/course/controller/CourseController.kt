@@ -218,7 +218,6 @@ class CourseController(
             val currentUser = userRepository.findById(userId).orElse(null)
                 ?: return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(mapOf("error" to "User not found"))
-
             val courses = courseService.getCoursesForCurrentUser(currentUser, page, size, sort_by, sort_order)
             ResponseEntity.ok(courses)
         } catch (e: IllegalArgumentException) {

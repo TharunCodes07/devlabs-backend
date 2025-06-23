@@ -1,7 +1,10 @@
 package com.devlabs.devlabsbackend.user.controller
 
 import com.devlabs.devlabsbackend.core.exception.NotFoundException
+import com.devlabs.devlabsbackend.security.utils.SecurityUtils
 import com.devlabs.devlabsbackend.user.domain.DTO.CreateUserRequest
+import com.devlabs.devlabsbackend.user.domain.DTO.KeycloakSyncRequest
+import com.devlabs.devlabsbackend.user.domain.DTO.KeycloakUserSyncRequest
 import com.devlabs.devlabsbackend.user.domain.DTO.UpdateUserRequest
 import com.devlabs.devlabsbackend.user.domain.Role
 import com.devlabs.devlabsbackend.user.service.UserService
@@ -118,9 +121,7 @@ class UserController (private val userService: UserService){
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(mapOf("message" to "Failed to fetch user: ${e.message}"))
         }
-    }
-
-    @GetMapping("/faculty")
+    }    @GetMapping("/faculty")
     fun getAllFaculty(): ResponseEntity<Any> {
         return try {
             val faculty = userService.getAllUsersByRole(Role.FACULTY)
@@ -131,7 +132,42 @@ class UserController (private val userService: UserService){
         }
     }
 
-
-
-
+    @GetMapping("/check-exists")
+    fun checkUserExists(@RequestParam email: String): ResponseEntity<Map<String, Boolean>> {
+        return try {
+            val exists = userService.checkUserExists(email)
+            ResponseEntity.ok(mapOf("exists" to exists))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("exists" to false))
+        }
+    }    
+    
+    @PostMapping("/keycloak-sync")    
+    fun createUserFromKeycloakSync(@RequestBody request: KeycloakUserSyncRequest): ResponseEntity<Any> {
+        return try {
+            // Get the current user ID from the JWT token
+            val userIdFromToken = SecurityUtils.getCurrentUserId()
+                ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(mapOf("error" to "User not authenticated"))
+            
+            // Map from KeycloakUserSyncRequest to KeycloakSyncRequest with the user ID from JWT
+            val keycloakSyncRequest = KeycloakSyncRequest(
+                id = userIdFromToken,
+                name = request.name,
+                email = request.email,
+                role = request.role,
+                phoneNumber = request.phoneNumber,
+                isActive = request.isActive
+            )
+            
+            val user = userService.createUserFromKeycloakSync(keycloakSyncRequest)
+            ResponseEntity.status(HttpStatus.CREATED).body(user)
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("message" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("message" to "Failed to create user from Keycloak sync: ${e.message}"))
+        }
+    }
 }

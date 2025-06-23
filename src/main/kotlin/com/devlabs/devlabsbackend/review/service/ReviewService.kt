@@ -203,39 +203,14 @@ class ReviewService(
         return review.toReviewResponse()
     }
 
-    @Transactional(readOnly = true)
-    fun getAllReviews(
-        page: Int = 0,
-        size: Int = 10,
-        sortBy: String = "startDate",
-        sortOrder: String = "desc"
-    ): PaginatedResponse<ReviewResponse> {
-        val direction = if (sortOrder.uppercase() == "ASC") Sort.Direction.ASC else Sort.Direction.DESC
-        val sort = Sort.by(direction, sortBy)
-        val pageable = PageRequest.of(page, size, sort)
-
-        val reviewsPage = reviewRepository.findAll(pageable)
-
-        val reviewResponses = reviewsPage.content.map { it.toReviewResponse() }
-
-        return PaginatedResponse(
-            data = reviewResponses,
-            pagination = PaginationInfo(
-                current_page = page,
-                per_page = size,
-                total_pages = reviewsPage.totalPages,
-                total_count = reviewsPage.totalElements.toInt()
-            )
-        )
-    }
-
-    @Transactional(readOnly = true)
-    fun getReviewsForUser(userId: String, page: Int = 0, size: Int = 10): PaginatedResponse<ReviewResponse> {
+    @Transactional(readOnly = true)    
+    fun getReviewsForUser(userId: String, page: Int = 0, size: Int = 10, sortBy: String = "startDate", sortOrder: String = "desc"): PaginatedResponse<ReviewResponse> {
         val user = userRepository.findById(userId).orElseThrow {
             NotFoundException("User with id $userId not found")
         }
 
-        val pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "startDate"))
+        val sort = createSort(sortBy, sortOrder)
+        val pageable = PageRequest.of(page, size, sort)
 
         val reviewsPage = when (user.role) {
             Role.ADMIN, Role.MANAGER -> {
@@ -551,7 +526,7 @@ class ReviewService(
     }
 
     @Transactional
-    private fun addCoursesToReview(review: Review, courseIds: List<UUID>, user: User) {
+    protected fun addCoursesToReview(review: Review, courseIds: List<UUID>, user: User) {
         val courses = courseRepository.findAllByIdWithSemester(courseIds)
 
         if (user.role == Role.FACULTY) {
@@ -575,7 +550,7 @@ class ReviewService(
     }
 
     @Transactional
-    private fun removeCoursesFromReview(review: Review, courseIds: List<UUID>) {
+    protected fun removeCoursesFromReview(review: Review, courseIds: List<UUID>) {
         val courses = courseRepository.findAllById(courseIds)
         courses.forEach { course ->
             // Only update the owning side (Review) - Hibernate will sync the inverse side automatically
@@ -584,7 +559,7 @@ class ReviewService(
     }
 
     @Transactional
-    private fun addProjectsToReview(review: Review, projectIds: List<UUID>, user: User) {
+    protected fun addProjectsToReview(review: Review, projectIds: List<UUID>, user: User) {
         val projects = projectRepository.findAllById(projectIds)
 
         // Only include Live/Proposed projects
@@ -615,7 +590,7 @@ class ReviewService(
     }
 
     @Transactional
-    private fun removeProjectsFromReview(review: Review, projectIds: List<UUID>, user: User) {
+    protected fun removeProjectsFromReview(review: Review, projectIds: List<UUID>, user: User) {
         val projects = projectRepository.findAllById(projectIds)
 
         if (user.role == Role.FACULTY) {
@@ -632,31 +607,71 @@ class ReviewService(
         projects.forEach { project ->
             review.projects.remove(project)
         }
-    }
-
+    }    
+    
     @Transactional
-    private fun addBatchesToReview(review: Review, batchIds: List<UUID>, user: User) {
+    protected fun addBatchesToReview(review: Review, batchIds: List<UUID>, user: User) {
         val batches = batchRepository.findAllById(batchIds)
 
-        batches.forEach { batch ->
-            // Check if relationship already exists to prevent duplicate key constraint violation
-            if (!review.batches.contains(batch)) {
-                review.batches.add(batch)
+        if (user.role == Role.FACULTY) {
+            batches.forEach { batch ->
+                val allCourses = courseRepository.findAll()
+                val batchCourses = allCourses.filter { course ->
+                    course.batches.contains(batch)
+                }
+                
+                val facultyCourses = batchCourses.filter { course ->
+                    course.instructors.contains(user)
+                }
+                
+                if (facultyCourses.isEmpty()) {
+                    throw ForbiddenException("Faculty can only assign reviews to batches containing courses they teach. No courses found in batch '${batch.name}' that you instruct.")
+                }
+                
+                facultyCourses.forEach { course ->
+                    if (!review.courses.contains(course)) {
+                        review.courses.add(course)
+                    }
+                }
+            }
+        } else {
+            batches.forEach { batch ->
+                if (!review.batches.contains(batch)) {
+                    review.batches.add(batch)
+                }
+            }
+        }    }    @Transactional
+    protected fun removeBatchesFromReview(review: Review, batchIds: List<UUID>, user: User) {
+        val batches = batchRepository.findAllById(batchIds)
+
+        if (user.role == Role.FACULTY) {
+            batches.forEach { batch ->
+                val allCourses = courseRepository.findAll()
+                val batchCourses = allCourses.filter { course ->
+                    course.batches.contains(batch)
+                }
+                
+                val facultyCourses = batchCourses.filter { course ->
+                    course.instructors.contains(user)
+                }
+                
+                if (facultyCourses.isEmpty()) {
+                    throw ForbiddenException("Faculty can only remove reviews from batches containing courses they teach.")
+                }
+                
+                facultyCourses.forEach { course ->
+                    review.courses.remove(course)
+                }
+            }
+        } else {
+            batches.forEach { batch ->
+                review.batches.remove(batch)
             }
         }
     }
 
     @Transactional
-    private fun removeBatchesFromReview(review: Review, batchIds: List<UUID>, user: User) {
-        val batches = batchRepository.findAllById(batchIds)
-
-        batches.forEach { batch ->
-            review.batches.remove(batch)
-        }
-    }
-
-    @Transactional
-    private fun addSemestersToReview(review: Review, semesterIds: List<UUID>, user: User) {
+    protected fun addSemestersToReview(review: Review, semesterIds: List<UUID>, user: User) {
         val semesters = semesterRepository.findAllByIdWithCourses(semesterIds)
 
         semesters.forEach { semester ->
@@ -682,7 +697,7 @@ class ReviewService(
     }
 
     @Transactional
-    private fun removeSemestersFromReview(review: Review, semesterIds: List<UUID>, user: User) {
+    protected fun removeSemestersFromReview(review: Review, semesterIds: List<UUID>, user: User) {
         val semesters = semesterRepository.findAllByIdWithCourses(semesterIds)
 
         semesters.forEach { semester ->
@@ -1276,15 +1291,19 @@ fun Review.toReviewResponse(): ReviewResponse {
                 id = it.id!!,
                 name = it.name,
                 criteria = it.criteria.map { criterion ->
-                    com.devlabs.devlabsbackend.review.domain.DTO.CriteriaInfo(
+                    CriteriaInfo(
                         id = criterion.id!!,
                         name = criterion.name,
                         description = criterion.description,
                         maxScore = criterion.maxScore,
                         isCommon = criterion.isCommon
                     )
-                }
-            )
+                }            )
         } ?: throw IllegalStateException("Review must have rubrics")
     )
+}
+
+private fun createSort(sortBy: String, sortOrder: String): Sort {
+    val direction = if (sortOrder.lowercase() == "desc") Sort.Direction.DESC else Sort.Direction.ASC
+    return Sort.by(direction, sortBy)
 }

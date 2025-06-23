@@ -87,6 +87,37 @@ class TeamController(
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(mapOf("error" to "Failed to delete team"))
         }
+    }      
+    
+    @GetMapping("/user/{userId}")
+    fun getTeamsByUser(
+        @PathVariable userId: String, 
+        @RequestParam(defaultValue = "0") page: Int, 
+        @RequestParam(defaultValue = "10") size: Int,
+        @RequestParam(defaultValue = "name") sort_by: String,
+        @RequestParam(defaultValue = "asc") sort_order: String
+    ): ResponseEntity<Any> {
+        return try {
+            val teams = teamService.getTeamsByUser(userId, page, size, sort_by, sort_order)
+            ResponseEntity.ok(teams)
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to get teams: ${e.message}"))
+        }
+    }
+
+    @GetMapping("/students/search")
+    fun searchStudents(@RequestParam query: String): ResponseEntity<Any> {
+        return try {
+            val students = teamService.searchStudents(query)
+            ResponseEntity.ok(students)
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to search students"))
+        }
     }
 
     @GetMapping("/search/{userId}")

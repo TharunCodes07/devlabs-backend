@@ -215,4 +215,18 @@ class ProjectController(
         }
     }
 
+    @GetMapping("/{projectId}/reviews")
+    fun getProjectReviews(@PathVariable projectId: UUID): ResponseEntity<Any> {
+        return try {
+            val response = reviewService.checkProjectReviewAssignment(projectId)
+            ResponseEntity.ok(response)
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to check project reviews: ${e.message}"))
+        }
+    }
+
 }

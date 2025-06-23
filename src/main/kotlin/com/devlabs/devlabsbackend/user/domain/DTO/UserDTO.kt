@@ -7,7 +7,7 @@ data class UserResponse(
     val profileId: String? = null,
     val image: String?,
     val role: String,
-    val phoneNumber: String,
+    val phoneNumber: String?,
     val isActive: Boolean,
     val createdAt: String
 )
@@ -16,11 +16,28 @@ data class CreateUserRequest(
     val name: String,
     val email: String,
     val role: String,
-    val phoneNumber: String,
+    val phoneNumber: String?,
     val isActive: Boolean = true
 )
 
 data class UpdateUserRequest(
+    val name: String,
+    val email: String,
+    val role: String,
+    val phoneNumber: String?,
+    val isActive: Boolean
+)
+
+data class KeycloakSyncRequest(
+    val id: String,
+    val name: String,
+    val email: String,
+    val role: String,
+    val phoneNumber: String,
+    val isActive: Boolean
+)
+
+data class KeycloakUserSyncRequest(
     val name: String,
     val email: String,
     val role: String,

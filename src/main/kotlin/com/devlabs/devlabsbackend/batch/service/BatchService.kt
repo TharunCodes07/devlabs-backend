@@ -86,8 +86,8 @@ class BatchService(
             NotFoundException("Batch with id $batchId not found")
         }
         return batch.toBatchResponse()
-    }
-
+    }    
+    
     @Transactional(readOnly = true)
     fun searchBatchStudents(
         batchId: UUID,
@@ -97,54 +97,24 @@ class BatchService(
         sortBy: String = "name",
         sortOrder: String = "asc"
     ): PaginatedResponse<UserResponse> {
-        val batch = batchRepository.findById(batchId).orElseThrow {
+        // First verify that the batch exists
+        batchRepository.findById(batchId).orElseThrow {
             NotFoundException("Batch with id $batchId not found")
         }
 
-        batch.students.size
-
-        val filteredStudents = batch.students.filter {
-            it.name.contains(query, ignoreCase = true) ||
-                    it.email.contains(query, ignoreCase = true)
-        }
-
         val direction = if (sortOrder.uppercase() == "DESC") Sort.Direction.DESC else Sort.Direction.ASC
-
-        // Sort the filtered students collection manually
-        val sortedStudents = when (sortBy.lowercase()) {
-            "name" -> if (direction == Sort.Direction.ASC)
-                filteredStudents.sortedBy { it.name }
-            else
-                filteredStudents.sortedByDescending { it.name }
-            "email" -> if (direction == Sort.Direction.ASC)
-                filteredStudents.sortedBy { it.email }
-            else
-                filteredStudents.sortedByDescending { it.email }
-            "createdat" -> if (direction == Sort.Direction.ASC)
-                filteredStudents.sortedBy { it.createdAt }
-            else
-                filteredStudents.sortedByDescending { it.createdAt }
-            else -> filteredStudents.sortedBy { it.name }
-        }
-
-        val totalElements = sortedStudents.size
-        val totalPages = (totalElements + size - 1) / size
-        val startIndex = page * size
-        val endIndex = minOf(startIndex + size, totalElements)
-
-        val pagedStudents = if (startIndex < totalElements) {
-            sortedStudents.subList(startIndex, endIndex)
-        } else {
-            emptyList()
-        }
+        val sort = Sort.by(direction, sortBy)
+        val pageable: Pageable = PageRequest.of(page, size, sort)
+        
+        val studentsPage = batchRepository.searchStudentsByBatchId(batchId, query, pageable)
 
         return PaginatedResponse(
-            data = pagedStudents.map { it.toUserResponse() },
+            data = studentsPage.content.map { it.toUserResponse() },
             pagination = PaginationInfo(
                 current_page = page,
                 per_page = size,
-                total_pages = totalPages,
-                total_count = totalElements
+                total_pages = studentsPage.totalPages,
+                total_count = studentsPage.totalElements.toInt()
             )
         )
     }
@@ -239,8 +209,7 @@ fun removeSemestersFromBatch(batchId: UUID, semesterId: List<UUID>) {
     @Transactional
     fun getAllActiveBatches(): List<BatchResponse> {
         return batchRepository.findByIsActiveTrue().map { it.toBatchResponse() }
-    }
-
+    }    @Transactional(readOnly = true)
     fun getBatchStudents(
         batchId: UUID,
         page: Int = 0,
@@ -248,49 +217,24 @@ fun removeSemestersFromBatch(batchId: UUID, semesterId: List<UUID>) {
         sortBy: String = "name",
         sortOrder: String = "asc"
     ): PaginatedResponse<UserResponse> {
-        val batch = batchRepository.findById(batchId).orElseThrow {
+        // First verify that the batch exists
+        batchRepository.findById(batchId).orElseThrow {
             NotFoundException("Batch with id $batchId not found")
         }
 
-
-        batch.students.size
-
         val direction = if (sortOrder.uppercase() == "DESC") Sort.Direction.DESC else Sort.Direction.ASC
-
-        val sortedStudents = when (sortBy.lowercase()) {
-            "name" -> if (direction == Sort.Direction.ASC)
-                batch.students.sortedBy { it.name }
-            else
-                batch.students.sortedByDescending { it.name }
-            "email" -> if (direction == Sort.Direction.ASC)
-                batch.students.sortedBy { it.email }
-            else
-                batch.students.sortedByDescending { it.email }
-            "createdat" -> if (direction == Sort.Direction.ASC)
-                batch.students.sortedBy { it.createdAt }
-            else
-                batch.students.sortedByDescending { it.createdAt }
-            else -> batch.students.sortedBy { it.name } // Default sort by name
-        }
-
-        val totalElements = sortedStudents.size
-        val totalPages = (totalElements + size - 1) / size // Ceiling division
-        val startIndex = page * size
-        val endIndex = minOf(startIndex + size, totalElements)
-
-        val pagedStudents = if (startIndex < totalElements) {
-            sortedStudents.subList(startIndex, endIndex)
-        } else {
-            emptyList()
-        }
+        val sort = Sort.by(direction, sortBy)
+        val pageable: Pageable = PageRequest.of(page, size, sort)
+        
+        val studentsPage = batchRepository.findStudentsByBatchId(batchId, pageable)
 
         return PaginatedResponse(
-            data = pagedStudents.map { it.toUserResponse() },
+            data = studentsPage.content.map { it.toUserResponse() },
             pagination = PaginationInfo(
                 current_page = page,
                 per_page = size,
-                total_pages = totalPages,
-                total_count = totalElements
+                total_pages = studentsPage.totalPages,
+                total_count = studentsPage.totalElements.toInt()
             )
         )
     }

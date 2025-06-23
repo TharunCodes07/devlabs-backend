@@ -8,9 +8,11 @@ import com.devlabs.devlabsbackend.team.domain.Team
 import com.devlabs.devlabsbackend.team.repository.TeamRepository
 import com.devlabs.devlabsbackend.user.domain.Role
 import com.devlabs.devlabsbackend.user.repository.UserRepository
+import com.devlabs.devlabsbackend.user.service.toUserResponse
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
@@ -69,6 +71,26 @@ class TeamService(
     fun getAllTeams(page: Int = 0, size: Int = 10): PaginatedResponse<TeamResponse> {
         val pageable: Pageable = PageRequest.of(page, size)
         val teamsPage: Page<Team> = teamRepository.findAllWithMembersAndProjects(pageable)
+
+        return PaginatedResponse(
+            data = teamsPage.content.map { team -> team.toTeamResponse() },
+            pagination = PaginationInfo(
+                current_page = page,
+                per_page = size,
+                total_pages = teamsPage.totalPages,
+                total_count = teamsPage.totalElements.toInt()
+            )
+        )
+    }    fun getTeamsByUser(userId: String, page: Int = 0, size: Int = 10, sortBy: String = "name", sortOrder: String = "asc"): PaginatedResponse<TeamResponse> {
+        val user = userRepository.findById(userId).orElseThrow {
+            NotFoundException("User with id $userId not found")
+        }
+        
+        val direction = if (sortOrder.lowercase() == "desc") Sort.Direction.DESC else Sort.Direction.ASC
+        val sort = Sort.by(direction, sortBy)
+        val pageable: Pageable = PageRequest.of(page, size, sort)
+        
+        val teamsPage: Page<Team> = teamRepository.findByMemberWithProjects(user, pageable)
 
         return PaginatedResponse(
             data = teamsPage.content.map { team -> team.toTeamResponse() },
@@ -160,6 +182,12 @@ class TeamService(
                 total_count = teamsPage.totalElements.toInt()
             )
         )
+    }
+
+    fun searchStudents(query: String): List<com.devlabs.devlabsbackend.user.domain.DTO.UserResponse> {
+        val students = userRepository.findByNameOrEmailContainingIgnoreCase(query)
+            .filter { it.role == Role.STUDENT }
+        return students.map { it.toUserResponse() }
     }
 
 

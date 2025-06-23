@@ -29,13 +29,40 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
  */
 @Configuration
 @Profile("dev")
-class DevSecurityConfig {
+@EnableWebSecurity
+@EnableMethodSecurity
+class DevSecurityConfig(@Autowired private val jwtAuthenticationEntryPoint: JwtAuthenticationEntryPoint) {
+
+    @Bean
+    fun keycloakJwtTokenConverterDev(): KeycloakJwtTokenConverter {
+        return KeycloakJwtTokenConverter(JwtGrantedAuthoritiesConverter())
+    }
+
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .csrf { it.disable() }
             .cors(Customizer.withDefaults())
-            .authorizeHttpRequests { it.anyRequest().permitAll() }
+            .sessionManagement { session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .authorizeHttpRequests { authorizeRequests ->
+                authorizeRequests
+                    .requestMatchers("/api/users/**").permitAll()
+                    .requestMatchers("/api/user/check-exists").permitAll()
+                    .requestMatchers("/error", "/actuator/**").permitAll()
+                    // For dev, allow unauthenticated access but still process JWT if present
+                    .anyRequest().permitAll()
+            }
+            .oauth2ResourceServer { oauth2 ->
+                oauth2.jwt { jwt ->
+                    jwt.jwtAuthenticationConverter(keycloakJwtTokenConverterDev())
+                }
+                oauth2.authenticationEntryPoint(jwtAuthenticationEntryPoint)
+            }
+            .exceptionHandling { ex -> 
+                ex.authenticationEntryPoint(jwtAuthenticationEntryPoint)
+            }
+            .addFilterBefore(RequestDebugFilter(), UsernamePasswordAuthenticationFilter::class.java)
+
         return http.build()
     }
 
@@ -87,10 +114,10 @@ class SecurityConfig(@Autowired private val jwtAuthenticationEntryPoint: JwtAuth
         http
             .csrf { csrf -> csrf.disable() }
             .cors(Customizer.withDefaults())
-            .sessionManagement { session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
-            .authorizeHttpRequests { authorizeRequests ->
+            .sessionManagement { session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }            .authorizeHttpRequests { authorizeRequests ->
                 authorizeRequests
                     .requestMatchers("/api/users/**").permitAll()
+                    .requestMatchers("/api/user/check-exists").permitAll()
 //                    .requestMatchers(
 //                        "/v3/api-docs/**",
 //                        "/swagger-ui/**",

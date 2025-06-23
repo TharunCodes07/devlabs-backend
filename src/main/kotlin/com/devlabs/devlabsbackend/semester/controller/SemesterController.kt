@@ -76,8 +76,6 @@ class SemesterController(val semesterService: SemesterService) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null)
         }
     }
-
-
     @DeleteMapping("/{semesterId}")
     fun deleteSemester(@PathVariable semesterId: UUID): ResponseEntity<Void> {
         return try {
@@ -85,6 +83,8 @@ class SemesterController(val semesterService: SemesterService) {
             ResponseEntity.noContent().build()
         } catch (e: NotFoundException) {
             ResponseEntity.status(HttpStatus.NOT_FOUND).build()
+        } catch (e: IllegalStateException) {
+            ResponseEntity.status(HttpStatus.BAD_REQUEST).build()
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build()
         }

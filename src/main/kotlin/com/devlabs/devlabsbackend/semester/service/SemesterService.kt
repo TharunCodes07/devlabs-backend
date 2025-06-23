@@ -178,8 +178,7 @@ class SemesterService
             )
         }
     }
-
-    }
+}
 
 fun Semester.toSemesterResponse(): SemesterResponse {
     return SemesterResponse(
