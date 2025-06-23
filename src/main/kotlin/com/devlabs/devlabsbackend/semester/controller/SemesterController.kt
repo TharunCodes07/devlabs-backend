@@ -4,9 +4,11 @@ import com.devlabs.devlabsbackend.core.exception.NotFoundException
 import com.devlabs.devlabsbackend.core.pagination.PaginatedResponse
 import com.devlabs.devlabsbackend.course.domain.DTO.CourseResponse
 import com.devlabs.devlabsbackend.course.domain.DTO.CreateCourseRequest
+import com.devlabs.devlabsbackend.security.utils.SecurityUtils
 import com.devlabs.devlabsbackend.semester.domain.DTO.SemesterResponse
 import com.devlabs.devlabsbackend.semester.domain.DTO.UpdateSemesterDTO
 import com.devlabs.devlabsbackend.semester.service.SemesterService
+import com.devlabs.devlabsbackend.user.service.UserService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -14,7 +16,7 @@ import java.util.*
 
 @RestController
 @RequestMapping("/api/semester")
-class SemesterController(val semesterService: SemesterService) {
+class SemesterController(val semesterService: SemesterService, val userService: UserService) {
 
     @GetMapping
     fun getAllSemesters(
@@ -52,13 +54,42 @@ class SemesterController(val semesterService: SemesterService) {
     }
 
     @GetMapping("/active")
-    fun getAllActiveSemesters(): ResponseEntity<List<SemesterResponse>> {
+    fun getAllActiveSemesters(): ResponseEntity<Any> {
+        // Get the user group from JWT
+        val rawUserGroup = SecurityUtils.getCurrentJwtClaim("groups")
+            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("message" to "User not authenticated"))
+
+        // Parse the group from the format "[/admin]" -> "admin"
+        val userGroup = rawUserGroup.trim().removePrefix("[/").removeSuffix("]")
+        println("User group after parsing: $userGroup")
+
         return try {
-            val semesters = semesterService.getAllActiveSemesters()
-            ResponseEntity.ok(semesters)
+            when {
+                // If user is admin, return all semesters (not just active ones)
+                userGroup.equals("admin", ignoreCase = true) -> {
+                    val allSemesters = semesterService.getAllActiveSemesters()
+                    ResponseEntity.ok(allSemesters)
+                }
+
+                // If user is faculty, return only semesters assigned to that faculty
+                userGroup.equals("faculty", ignoreCase = true) -> {
+                    val currentUserId = SecurityUtils.getCurrentUserId()
+                        ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("message" to "User not authenticated"))
+
+                    // Get faculty's assigned semesters
+                    val facultySemesters = semesterService.getFacultyAssignedSemesters(currentUserId)
+                    ResponseEntity.ok(facultySemesters)
+                }
+
+                // For any other user type, return unauthorized
+                else -> {
+                    ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(mapOf("message" to "Unauthorized access - $userGroup role cannot access semester information"))
+                }
+            }
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(null)
+                .body(mapOf("message" to "Error retrieving semesters: ${e.message}"))
         }
     }
 

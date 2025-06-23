@@ -10,6 +10,7 @@ import com.devlabs.devlabsbackend.semester.domain.DTO.SemesterResponse
 import com.devlabs.devlabsbackend.semester.domain.DTO.UpdateSemesterDTO
 import com.devlabs.devlabsbackend.semester.domain.Semester
 import com.devlabs.devlabsbackend.semester.repository.SemesterRepository
+import com.devlabs.devlabsbackend.user.domain.Role
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -23,7 +24,8 @@ class SemesterService
     (
     val semesterRepository: SemesterRepository,
     private val courseRepository: CourseRepository,
-    private val batchRepository: BatchRepository
+    private val batchRepository: BatchRepository,
+    private val userRepository: com.devlabs.devlabsbackend.user.repository.UserRepository
 ){
     fun getAllSemestersPaginated(page: Int, size: Int, sortBy: String = "name", sortOrder: String = "asc"): PaginatedResponse<SemesterResponse> {
         val sort = createSort(sortBy, sortOrder)
@@ -37,8 +39,7 @@ class SemesterService
                 per_page = size,
                 total_pages = semesterPage.totalPages,
                 total_count = semesterPage.totalElements.toInt()
-            )
-        )
+            ))
     }
 
     fun searchSemesterPaginated(query: String, page: Int, size: Int, sortBy: String = "name", sortOrder: String = "asc"): PaginatedResponse<SemesterResponse> {
@@ -72,6 +73,42 @@ class SemesterService
         return semesterRepository.findByIsActiveTrue().map { it.toSemesterResponse() }
     }
 
+    /**
+     * Gets semesters assigned to a specific faculty member based on user role
+     * @param facultyId The ID of the faculty member
+     * @return List of semesters assigned to the faculty member or all semesters depending on role
+     */
+    fun getFacultyAssignedSemesters(facultyId: String): List<SemesterResponse> {
+        val user = userRepository.findById(facultyId).orElseThrow {
+            NotFoundException("User with id $facultyId not found")
+        }
+
+        return when (user.role) {
+            Role.FACULTY -> {
+                // Find all active courses where the user is an instructor
+                val facultyCourses = courseRepository.findCoursesByActiveSemestersAndInstructor(user)
+
+                // Extract unique semesters from the courses
+                val semesterIds = facultyCourses.mapNotNull { it.semester.id }.toSet()
+
+                // If no courses found for the faculty, return an empty list
+                if (semesterIds.isEmpty()) {
+                    emptyList()
+                } else {
+                    // Get all semesters by their IDs
+                    semesterRepository.findAllById(semesterIds).map { it.toSemesterResponse() }
+                }
+            }
+            Role.ADMIN, Role.MANAGER -> {
+                // Admins and managers can see all semesters
+                getAllActiveSemesters()
+            }
+            else -> {
+                // For other roles like STUDENT, return empty list or throw exception
+                emptyList()
+            }
+        }
+    }
 
     fun getSemesterById(semesterId: UUID): SemesterResponse {
         val semester = semesterRepository.findById(semesterId)
