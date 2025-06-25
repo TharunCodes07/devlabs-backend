@@ -106,14 +106,15 @@ class IndividualScoreService(
                 name = member.name,
                 email = member.email,
                 role = member.role.name
-            )        }
-        val criteria = review.rubrics?.criteria?.map { criterion ->
+            )        
+            }        
+            val criteria = review.rubrics?.criteria?.map { criterion ->
             CriterionInfo(
                 id = criterion.id!!,
                 name = criterion.name,
                 description = criterion.description,
                 maxScore = criterion.maxScore.toDouble(),
-                courseSpecific = true
+                courseSpecific = !criterion.isCommon
             )
         } ?: emptyList()
 
