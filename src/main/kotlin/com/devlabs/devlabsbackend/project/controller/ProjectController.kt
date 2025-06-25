@@ -7,6 +7,7 @@ import com.devlabs.devlabsbackend.project.domain.DTO.UserIdRequest
 import com.devlabs.devlabsbackend.project.domain.DTO.toProjectResponse
 import com.devlabs.devlabsbackend.project.service.ProjectService
 import com.devlabs.devlabsbackend.review.service.ReviewService
+import com.devlabs.devlabsbackend.security.utils.SecurityUtils
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -123,12 +124,22 @@ class ProjectController(
 
     @GetMapping("/active")
     fun getAllActiveProjects(): ResponseEntity<Any> {
-        return try {
-            val projects = projectService.getAllActiveProjects()
-            ResponseEntity.ok(projects)
-        } catch (e: Exception) {
-            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(mapOf("error" to "Failed to retrieve active projects: ${e.message}"))
+        val rawUserGroup = SecurityUtils.getCurrentJwtClaim("groups")
+            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("message" to "User not authenticated"))
+        val userGroup = rawUserGroup.trim().removePrefix("[/").removeSuffix("]")
+
+        if(userGroup.equals("admin", ignoreCase = true)) {
+            return getAllActiveProjects()
+        }
+        if(userGroup.equals("faculty", ignoreCase = true)) {
+            val currentUserId = SecurityUtils.getCurrentUserId()
+                ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("message" to "User not authenticated"))
+            val projects = projectService.getActiveProjectsByFaculty(currentUserId)
+            return ResponseEntity.ok(projects)
+        }
+        else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(mapOf("message" to "Unauthorized access - $userGroup role cannot access active projects"))
         }
     }
 

@@ -5,6 +5,7 @@ import com.devlabs.devlabsbackend.core.exception.NotFoundException
 import com.devlabs.devlabsbackend.core.pagination.PaginatedResponse
 import com.devlabs.devlabsbackend.course.domain.DTO.CourseResponse
 import com.devlabs.devlabsbackend.course.service.CourseService
+import com.devlabs.devlabsbackend.security.utils.SecurityUtils
 import com.devlabs.devlabsbackend.user.domain.DTO.UserResponse
 import com.devlabs.devlabsbackend.user.repository.UserRepository
 import org.springframework.http.HttpStatus
@@ -75,7 +76,8 @@ class CourseController(
                 .body(mapOf("message" to e.message))
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(mapOf("message" to "Failed to assign students to course: ${e.message}"))        }
+                .body(mapOf("message" to "Failed to assign students to course: ${e.message}"))
+        }
     }
 
     @DeleteMapping("/{courseId}/students/{studentId}")
@@ -128,7 +130,10 @@ class CourseController(
 
 
     @DeleteMapping("/{courseId}/instructors/{instructorId}")
-    fun removeInstructorFromCourse(@PathVariable courseId: UUID, @PathVariable instructorId: String): ResponseEntity<Any> {
+    fun removeInstructorFromCourse(
+        @PathVariable courseId: UUID,
+        @PathVariable instructorId: String
+    ): ResponseEntity<Any> {
         return try {
             courseService.removeInstructors(courseId, listOf(instructorId))
             ResponseEntity.ok().build()
@@ -143,13 +148,28 @@ class CourseController(
 
     @GetMapping("/active")
     fun getAllActiveCourses(): ResponseEntity<Any> {
-        return try {
-            val courses = courseService.getAllActiveCourses()
-            ResponseEntity.ok(courses)
+        val rawUserGroup = SecurityUtils.getCurrentJwtClaim("groups")
+            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("message" to "User not authenticated"))
+        val userGroup = rawUserGroup.trim().removePrefix("[/").removeSuffix("]")
+        try {
+            if (userGroup.equals("admin", ignoreCase = true)) {
+                val courses = courseService.getAllActiveCourses()
+                return ResponseEntity.ok(courses)
+            }
+            if (userGroup.equals("faculty", ignoreCase = true)) {
+                val currentUserId = SecurityUtils.getCurrentUserId()
+                    ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(mapOf("message" to "User not authenticated"))
+                val courses = courseService.getFacultyActiveCourses(currentUserId)
+                return ResponseEntity.ok(courses)
+            }
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(mapOf("error" to "Failed to retrieve active courses: ${e.message}"))
+                .body(mapOf("message" to "Error retrieving courses: ${e.message}"))
         }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(mapOf("message" to "Unauthorized access - $userGroup role cannot access course information"))
+
     }
 
 

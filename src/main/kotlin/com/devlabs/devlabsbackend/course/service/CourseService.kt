@@ -547,6 +547,16 @@ class CourseService(
         )
     }
 
+    fun getFacultyActiveCourses(facultyId: String): List<CourseResponse> {
+        val faculty = userRepository.findById(facultyId).orElseThrow {
+            NotFoundException("Faculty with id $facultyId not found")
+        }
+        if (faculty.role != Role.FACULTY) {
+            throw IllegalArgumentException("User is not a faculty member")
+        }
+        return courseRepository.findCoursesByActiveSemestersAndInstructor(faculty).map { it.toCourseResponse() }
+    }
+
 }
 
 

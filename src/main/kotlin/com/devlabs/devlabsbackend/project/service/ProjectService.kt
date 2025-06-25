@@ -349,6 +349,13 @@ class ProjectService(
         return projectRepository.findActiveProjectsByBatch(batchId)
             .map { it.toProjectResponse() }
     }
+
+    fun getActiveProjectsByFaculty(facultyId: String){
+        val faculty = userRepository.findById(facultyId).
+            orElseThrow { NotFoundException("Faculty with id $facultyId not found") }
+        val projects = projectRepository.findActiveProjectsByFaculty(facultyId)
+        return projects.map { it.toProjectResponse() }
+    }
 }
 
 private fun createSort(sortBy: String, sortOrder: String): Sort {

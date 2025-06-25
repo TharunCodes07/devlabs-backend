@@ -34,4 +34,7 @@ interface BatchRepository : JpaRepository<Batch, UUID>{
 
     @Query("SELECT u FROM Batch b JOIN b.students u WHERE b.id = :batchId AND (LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')))")
     fun searchStudentsByBatchId(@Param("batchId") batchId: UUID, @Param("query") query: String, pageable: Pageable): Page<User>
+
+    @Query("SELECT b FROM Batch b JOIN b.students s WHERE b.isActive = true AND s.id = :studentId")
+    fun findByIsActiveTrueAndStudentsId(@Param("studentId") studentId: String): List<Batch>
 }

@@ -8,6 +8,7 @@ import com.devlabs.devlabsbackend.batch.service.BatchService
 import com.devlabs.devlabsbackend.core.exception.NotFoundException
 import com.devlabs.devlabsbackend.core.pagination.PaginatedResponse
 import com.devlabs.devlabsbackend.core.pagination.PaginationInfo
+import com.devlabs.devlabsbackend.security.utils.SecurityUtils
 import com.devlabs.devlabsbackend.semester.domain.Semester
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -132,21 +133,38 @@ class BatchController(
             ResponseEntity.ok(batches)
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(PaginatedResponse(
-                    data = emptyList(),
-                    pagination = PaginationInfo(0, size, 0, 0)
-                ))
+                .body(
+                    PaginatedResponse(
+                        data = emptyList(),
+                        pagination = PaginationInfo(0, size, 0, 0)
+                    )
+                )
         }
     }
 
     @GetMapping("/active")
     fun getAllActiveBatches(): ResponseEntity<Any> {
-        return try {
-            val batches = batchService.getAllActiveBatches()
-            ResponseEntity.ok(batches)
-        } catch (e: Exception) {
-            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(mapOf("error" to "Failed to retrieve active batches: ${e.message}"))
+        val rawUserGroup = SecurityUtils.getCurrentJwtClaim("groups")
+            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("message" to "User not authenticated"))
+        val userGroup = rawUserGroup.trim().removePrefix("[/").removeSuffix("]")
+        try {
+
+            if (userGroup.equals("admin", ignoreCase = true)) {
+                val batches = batchService.getAllActiveBatches()
+                return ResponseEntity.ok(batches)
+            } else if (userGroup.equals("faculty", ignoreCase = true)) {
+                val currentUserId = SecurityUtils.getCurrentUserId()
+                    ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("message" to "User not authenticated"))
+                val batches = batchService.getAllActiveBatchesForUser(currentUserId)
+                return ResponseEntity.ok(batches)
+            } else {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(mapOf("message" to "Access denied for user group: $userGroup"))
+            }
+        }
+        catch (e: Exception) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("message" to "Failed to fetch active batches: ${e.message}"))
         }
     }
 

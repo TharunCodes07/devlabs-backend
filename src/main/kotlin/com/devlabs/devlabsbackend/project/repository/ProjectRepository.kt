@@ -135,5 +135,10 @@ interface ProjectRepository : JpaRepository<Project, UUID> {
         @Param("student") student: com.devlabs.devlabsbackend.user.domain.User, 
         pageable: Pageable
     ): Page<Project>
-    
+
+    // Find all active projects (PROPOSED or ONGOING) where the faculty is an instructor in the associated courses
+    @Query("SELECT DISTINCT p FROM Project p JOIN p.courses c JOIN c.instructors i WHERE i.id = :facultyId AND p.status IN ('PROPOSED', 'ONGOING')")
+    fun findActiveProjectsByFaculty(
+        @Param("facultyId") facultyId: String
+    ): List<Project>
 }

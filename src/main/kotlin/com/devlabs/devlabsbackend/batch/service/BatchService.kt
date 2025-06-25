@@ -28,8 +28,7 @@ class BatchService(
     private val batchRepository: BatchRepository,
     private val semesterRepository: SemesterRepository,
     private val departmentRepository: DepartmentRepository
-)
-{
+) {
     @Transactional
     fun createBatch(request: CreateBatchRequest): BatchResponse {
         val department = request.departmentId?.let { departmentId ->
@@ -86,8 +85,8 @@ class BatchService(
             NotFoundException("Batch with id $batchId not found")
         }
         return batch.toBatchResponse()
-    }    
-    
+    }
+
     @Transactional(readOnly = true)
     fun searchBatchStudents(
         batchId: UUID,
@@ -105,7 +104,7 @@ class BatchService(
         val direction = if (sortOrder.uppercase() == "DESC") Sort.Direction.DESC else Sort.Direction.ASC
         val sort = Sort.by(direction, sortBy)
         val pageable: Pageable = PageRequest.of(page, size, sort)
-        
+
         val studentsPage = batchRepository.searchStudentsByBatchId(batchId, query, pageable)
 
         return PaginatedResponse(
@@ -119,7 +118,12 @@ class BatchService(
         )
     }
 
-    fun getAllBatches(page: Int = 0, size: Int = 10, sortBy: String? = "name", sortOrder: String? = "asc"): PaginatedResponse<BatchResponse> {
+    fun getAllBatches(
+        page: Int = 0,
+        size: Int = 10,
+        sortBy: String? = "name",
+        sortOrder: String? = "asc"
+    ): PaginatedResponse<BatchResponse> {
         val sort = createSort(sortBy, sortOrder)
         val pageable: Pageable = PageRequest.of(page, size, sort)
         val batchesPage: Page<Batch> = batchRepository.findAll(pageable)
@@ -146,34 +150,34 @@ class BatchService(
     }
 
     @Transactional
-fun removeStudentsFromBatch(batchId: UUID, studentId: List<String>) {
-    val batch = batchRepository.findById(batchId).orElseThrow {
-        NotFoundException("Could not find course with id $batchId")
+    fun removeStudentsFromBatch(batchId: UUID, studentId: List<String>) {
+        val batch = batchRepository.findById(batchId).orElseThrow {
+            NotFoundException("Could not find course with id $batchId")
+        }
+        val users = userRepository.findAllById(studentId)
+        batch.students.removeAll(users)
+        batchRepository.save(batch)
     }
-    val users = userRepository.findAllById(studentId)
-    batch.students.removeAll(users)
-    batchRepository.save(batch)
-}
 
     @Transactional
-fun addSemestersToBatches(batchId: UUID, semesterId: List<UUID>) {
-    val batch = batchRepository.findById(batchId).orElseThrow {
-        NotFoundException("Could not find course with id $batchId")
+    fun addSemestersToBatches(batchId: UUID, semesterId: List<UUID>) {
+        val batch = batchRepository.findById(batchId).orElseThrow {
+            NotFoundException("Could not find course with id $batchId")
+        }
+        val semesters = semesterRepository.findAllById(semesterId)
+        batch.semester.addAll(semesters)
+        batchRepository.save(batch)
     }
-    val semesters = semesterRepository.findAllById(semesterId)
-    batch.semester.addAll(semesters)
-    batchRepository.save(batch)
-}
 
     @Transactional
-fun removeSemestersFromBatch(batchId: UUID, semesterId: List<UUID>) {
-    val batch = batchRepository.findById(batchId).orElseThrow {
-        NotFoundException("Could not find course with id $batchId")
+    fun removeSemestersFromBatch(batchId: UUID, semesterId: List<UUID>) {
+        val batch = batchRepository.findById(batchId).orElseThrow {
+            NotFoundException("Could not find course with id $batchId")
+        }
+        val semesters = semesterRepository.findAllById(semesterId)
+        batch.semester.removeAll(semesters)
+        batchRepository.save(batch)
     }
-    val semesters = semesterRepository.findAllById(semesterId)
-    batch.semester.removeAll(semesters)
-    batchRepository.save(batch)
-}
 
     private fun createSort(sortBy: String?, sortOrder: String?): Sort {
         return if (sortBy != null) {
@@ -209,7 +213,9 @@ fun removeSemestersFromBatch(batchId: UUID, semesterId: List<UUID>) {
     @Transactional
     fun getAllActiveBatches(): List<BatchResponse> {
         return batchRepository.findByIsActiveTrue().map { it.toBatchResponse() }
-    }    @Transactional(readOnly = true)
+    }
+
+    @Transactional(readOnly = true)
     fun getBatchStudents(
         batchId: UUID,
         page: Int = 0,
@@ -225,7 +231,7 @@ fun removeSemestersFromBatch(batchId: UUID, semesterId: List<UUID>) {
         val direction = if (sortOrder.uppercase() == "DESC") Sort.Direction.DESC else Sort.Direction.ASC
         val sort = Sort.by(direction, sortBy)
         val pageable: Pageable = PageRequest.of(page, size, sort)
-        
+
         val studentsPage = batchRepository.findStudentsByBatchId(batchId, pageable)
 
         return PaginatedResponse(
@@ -239,9 +245,19 @@ fun removeSemestersFromBatch(batchId: UUID, semesterId: List<UUID>) {
         )
     }
 
+    fun getAllActiveBatchesForUser(userId: String): List<BatchResponse> {
+        // First verify that the user exists
+        userRepository.findById(userId).orElseThrow {
+            NotFoundException("User with id $userId not found")
+        }
+        return batchRepository.findByIsActiveTrueAndStudentsId(userId).map {
+            it.toBatchResponse()
+        }
+
+    }
 }
 
-
+@Transactional(readOnly = true)
 fun Batch.toBatchResponse(): BatchResponse {
     return BatchResponse(
         id = this.id,
@@ -257,4 +273,5 @@ fun Batch.toBatchResponse(): BatchResponse {
         }
     )
 }
+
 
