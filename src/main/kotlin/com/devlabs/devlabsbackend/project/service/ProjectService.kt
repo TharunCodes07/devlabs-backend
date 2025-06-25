@@ -350,7 +350,7 @@ class ProjectService(
             .map { it.toProjectResponse() }
     }
 
-    fun getActiveProjectsByFaculty(facultyId: String){
+    fun getActiveProjectsByFaculty(facultyId: String): List<ProjectResponse> {
         val faculty = userRepository.findById(facultyId).
             orElseThrow { NotFoundException("Faculty with id $facultyId not found") }
         val projects = projectRepository.findActiveProjectsByFaculty(facultyId)
