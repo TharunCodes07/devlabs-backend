@@ -1048,7 +1048,16 @@ class ReviewService(
             Role.STUDENT -> {
                 // Students can only view results if published and they're part of the project
                 if (!review.isPublished) {
-                    throw ForbiddenException("Students can only view results for published reviews")
+                    // Return empty results for unpublished reviews instead of throwing exception
+                    return ReviewResultsResponse(
+                        id = project.id!!,
+                        title = project.title,
+                        projectTitle = project.title,
+                        reviewName = review.name,
+                        isPublished = false,
+                        canViewAllResults = false,
+                        results = emptyList()
+                    )
                 }
                 if (!project.team.members.contains(user)) {
                     throw ForbiddenException("Students can only view results for their own projects")
@@ -1057,11 +1066,6 @@ class ReviewService(
             }
 
             else -> throw ForbiddenException("Invalid user role")
-        }
-
-        // For students with unpublished reviews, deny access
-        if (user.role == Role.STUDENT && !review.isPublished) {
-            throw ForbiddenException("Students can only view results for published reviews")
         }
 
         // Get all individual scores for this review and project
@@ -1081,19 +1085,46 @@ class ReviewService(
         val results = filteredParticipants.map { participant ->
             val participantScores = scoresByParticipant[participant] ?: emptyList()
 
-            // Calculate total individual score
-            val individualScore = participantScores.sumOf { it.score }
+            // Calculate total scores
+            val totalScore = participantScores.sumOf { it.score }
+            val maxPossibleScore = participantScores.sumOf { it.criterion.maxScore.toDouble() }
+            val percentage = if (maxPossibleScore > 0.0) {
+                (totalScore / maxPossibleScore) * 100.0
+            } else {
+                0.0
+            }
+
+            // Build criterion results
+            val criterionResults = participantScores.map { score ->
+                CriterionResult(
+                    criterionId = score.criterion.id!!,
+                    criterionName = score.criterion.name,
+                    score = score.score,
+                    maxScore = score.criterion.maxScore.toDouble(),
+                    comment = score.comment
+                )
+            }
 
             StudentResult(
                 id = participant.id!!,
                 name = participant.name,
-                individualScore = individualScore
+                studentId = participant.id!!,
+                studentName = participant.name,
+                individualScore = totalScore,
+                totalScore = totalScore,
+                maxPossibleScore = maxPossibleScore,
+                percentage = percentage,
+                scores = criterionResults
             )
         }
 
         return ReviewResultsResponse(
             id = project.id!!,
             title = project.title,
+            projectTitle = project.title,
+            reviewName = review.name,
+            isPublished = review.isPublished ?: false,
+            canViewAllResults = canViewAllResults,
             results = results
         )
     }

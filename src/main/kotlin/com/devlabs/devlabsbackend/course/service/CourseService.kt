@@ -168,15 +168,39 @@ class CourseService(
             courses
         }
         return finalCourses.map { course ->
-            val reviewCount = individualScoreRepository.countDistinctReviewsForStudentAndCourse(student, course)
+            // Get all reviews for this student and course
+            val allReviews = individualScoreRepository.findDistinctReviewsByParticipantAndCourse(student, course)
+            
+            // Filter to only include published reviews
+            val publishedReviews = allReviews.filter { review -> 
+                review.isPublished == true 
+            }
+            
+            // Calculate scores and counts based only on published reviews
+            val reviewCount = publishedReviews.size
             val averageScorePercentage = if (reviewCount == 0) {
-                // Default to 100% when no reviews exist yet
+                // Default to 100% when no published reviews exist yet
                 100.0
             } else {
-                individualScoreRepository.getAverageScorePercentageForStudentAndCourse(student, course)
+                // Calculate average score percentage from published reviews only
+                val allPublishedScores = publishedReviews.flatMap { review ->
+                    individualScoreRepository.findByParticipantAndReviewAndCourse(student, review, course)
+                }
+                
+                if (allPublishedScores.isEmpty()) {
+                    100.0
+                } else {
+                    val totalPossibleScore = allPublishedScores.sumOf { it.criterion.maxScore.toDouble() }
+                    val actualScore = allPublishedScores.sumOf { it.score }
+                    if (totalPossibleScore > 0.0) {
+                        (actualScore / totalPossibleScore) * 100.0
+                    } else {
+                        100.0
+                    }
+                }
             }
 
-            println("DEBUG: Course ${course.name} - Reviews: $reviewCount, Average: $averageScorePercentage%")
+            println("DEBUG: Course ${course.name} - Published Reviews: $reviewCount, Average: $averageScorePercentage%")
 
             StudentCourseWithScoresResponse(
                 id = course.id!!,
@@ -210,9 +234,19 @@ class CourseService(
             throw IllegalArgumentException("Student is not enrolled in this course")
         }
 
-        val reviews = individualScoreRepository.findDistinctReviewsByParticipantAndCourse(student, course)
+        val allReviews = individualScoreRepository.findDistinctReviewsByParticipantAndCourse(student, course)
+        
+        // Filter to only include published reviews for students
+        val publishedReviews = allReviews.filter { review -> 
+            review.isPublished == true 
+        }
 
-        return reviews.map { review ->
+        // If no published reviews exist, return empty list (default data)
+        if (publishedReviews.isEmpty()) {
+            return emptyList()
+        }
+
+        return publishedReviews.map { review ->
             val scores = individualScoreRepository.findByParticipantAndReviewAndCourse(student, review, course)
             val totalPossibleScore = scores.sumOf { score -> score.criterion.maxScore.toDouble() }
             val actualScore = scores.sumOf { score -> score.score }
@@ -236,7 +270,7 @@ class CourseService(
                 startDate = review.startDate,
                 endDate = review.endDate,
                 status = status,
-                showResult = review.isPublished,
+                showResult = true, // Always true since we're only showing published reviews
                 score = if (scores.isNotEmpty()) actualScore else null,
                 totalScore = if (scores.isNotEmpty()) totalPossibleScore else null,
                 scorePercentage = if (scores.isNotEmpty()) scorePercentage else null,
