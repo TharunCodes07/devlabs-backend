@@ -6,6 +6,7 @@ import com.devlabs.devlabsbackend.review.domain.DTO.CreateReviewRequest
 import com.devlabs.devlabsbackend.review.domain.DTO.ReviewPublicationResponse
 import com.devlabs.devlabsbackend.review.domain.DTO.ReviewResultsRequest
 import com.devlabs.devlabsbackend.review.domain.DTO.UserIdRequest
+import com.devlabs.devlabsbackend.review.domain.DTO.UpdateReviewRequest
 import com.devlabs.devlabsbackend.review.service.ReviewService
 import com.devlabs.devlabsbackend.review.service.toReviewResponse
 import com.devlabs.devlabsbackend.security.utils.SecurityUtils
@@ -13,6 +14,7 @@ import com.devlabs.devlabsbackend.user.domain.Role
 import com.devlabs.devlabsbackend.user.repository.UserRepository
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.*
 import java.util.*
 
@@ -275,6 +277,30 @@ class ReviewController(
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(mapOf("error" to "Failed to remove file from review: ${e.message}"))
+        }
+    }
+
+    @PutMapping("/{reviewId}")
+    @Transactional
+    fun updateReview(
+        @PathVariable reviewId: UUID,
+        @RequestBody request: UpdateReviewRequest
+    ): ResponseEntity<Any> {
+        return try {
+            val updatedReview = reviewService.updateReview(reviewId, request, request.userId)
+            ResponseEntity.ok(updatedReview.toReviewResponse())
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: ForbiddenException) {
+            ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(mapOf("error" to e.message))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to update review: ${e.message}"))
         }
     }
 
