@@ -6,6 +6,10 @@ import java.util.*
 data class ReviewResultsResponse(
     val id: UUID,
     val title: String,
+    val projectTitle: String,
+    val reviewName: String,
+    val isPublished: Boolean,
+    val canViewAllResults: Boolean,
     val results: List<StudentResult>
 )
 
@@ -13,7 +17,13 @@ data class ReviewResultsResponse(
 data class StudentResult(
     val id: String,
     val name: String,
-    val individualScore: Double
+    val studentId: String,
+    val studentName: String,
+    val individualScore: Double,
+    val totalScore: Double,
+    val maxPossibleScore: Double,
+    val percentage: Double,
+    val scores: List<CriterionResult>
 )
 
 data class CriterionResult(
