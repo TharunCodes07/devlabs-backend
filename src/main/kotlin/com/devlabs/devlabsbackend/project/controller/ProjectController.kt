@@ -102,6 +102,47 @@ class ProjectController(
         }
     }
 
+    @PatchMapping("/{projectId}/approve")
+    fun approve(
+        @PathVariable projectId: UUID): ResponseEntity<Any>{
+        val userId = SecurityUtils.getCurrentUserId()
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(mapOf("error" to "User not authenticated"))
+        }
+        return try {
+            projectService.approveProject(projectId, userId)
+            ResponseEntity.ok(mapOf("success" to true, "message" to "Project approved successfully"))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to approve project: ${e.message}"))
+        }
+    }
+
+    @PatchMapping("/{projectId}/reject")
+    fun reject(
+        @PathVariable projectId: UUID,
+        @RequestBody request: UserIdRequest
+    ): ResponseEntity<Any> {
+        return try {
+            projectService.rejectProject(projectId, request.userId)
+            ResponseEntity.ok(mapOf("success" to true, "message" to "Project rejected successfully"))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to reject project: ${e.message}"))
+        }
+    }
+
     @DeleteMapping("/{projectId}")
     fun deleteProject(
         @PathVariable projectId: UUID,
@@ -120,7 +161,6 @@ class ProjectController(
                 .body(mapOf("error" to "Failed to delete project: ${e.message}"))
         }
     }
-
 
     @GetMapping("/active")
     fun getAllActiveProjects(): ResponseEntity<Any> {

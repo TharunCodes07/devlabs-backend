@@ -356,7 +356,47 @@ class ProjectService(
         val projects = projectRepository.findActiveProjectsByFaculty(facultyId)
         return projects.map { it.toProjectResponse() }
     }
+
+    @Transactional
+    fun approveProject(projectId: UUID, userId: String){
+        val user = userRepository.findById(userId).orElseThrow {
+            NotFoundException("User not found")
+        }
+        if (user.role != Role.ADMIN && user.role != Role.MANAGER || user.role != Role.FACULTY) {
+            throw IllegalArgumentException("U are not authorized to approve projects")
+        }
+        val project = projectRepository.findById(projectId).orElseThrow{
+            NotFoundException("Project with id $projectId not found")
+        }
+        if (project.status != ProjectStatus.PROPOSED) {
+            throw IllegalArgumentException("Project cannot be approved in current status: ${project.status}")
+        }
+        project.status = ProjectStatus.ONGOING
+        project.updatedAt = Timestamp.from(Instant.now())
+        projectRepository.save(project)
+    }
+
+    @Transactional
+    fun rejectProject(projectId: UUID, userId: String){
+        val user = userRepository.findById(userId).orElseThrow{
+            NotFoundException("User not found")
+        }
+        if(user.role != Role.ADMIN && user.role != Role.MANAGER || user.role != Role.FACULTY) {
+            throw IllegalArgumentException("U are not authorized to reject projects")
+        }
+        val project = projectRepository.findById(projectId). orElseThrow {
+            NotFoundException("Project with id $projectId not found")
+        }
+        if (project.status != ProjectStatus.PROPOSED) {
+            throw IllegalArgumentException("Project cannot be rejected in current status: ${project.status}")
+        }
+        project.status = ProjectStatus.REJECTED
+        project.updatedAt = Timestamp.from(Instant.now())
+        projectRepository.save(project)
+    }
 }
+
+
 
 private fun createSort(sortBy: String, sortOrder: String): Sort {
     val direction = if (sortOrder.lowercase() == "desc") Sort.Direction.DESC else Sort.Direction.ASC
