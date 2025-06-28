@@ -29,7 +29,7 @@ class ProjectService(
     private val teamRepository: TeamRepository,
     private val courseRepository: CourseRepository,
     private val userRepository: UserRepository
-){
+) {
 
     fun createProject(projectData: CreateProjectRequest): Project {
         try {
@@ -109,7 +109,13 @@ class ProjectService(
         return project
     }
 
-    fun getProjectsByCourse(courseId: UUID, page: Int = 0, size: Int = 10, sortBy: String = "title", sortOrder: String = "asc"): PaginatedResponse<ProjectResponse> {
+    fun getProjectsByCourse(
+        courseId: UUID,
+        page: Int = 0,
+        size: Int = 10,
+        sortBy: String = "title",
+        sortOrder: String = "asc"
+    ): PaginatedResponse<ProjectResponse> {
         val course = courseRepository.findById(courseId).orElseThrow {
             NotFoundException("Course with id $courseId not found")
         }
@@ -188,7 +194,12 @@ class ProjectService(
             .map { it.toProjectResponse() }
     }
 
-    fun getProjectsForUserByCourse(userId: String, courseId: UUID, page: Int = 0, size: Int = 10): PaginatedResponse<ProjectResponse> {
+    fun getProjectsForUserByCourse(
+        userId: String,
+        courseId: UUID,
+        page: Int = 0,
+        size: Int = 10
+    ): PaginatedResponse<ProjectResponse> {
         val user = userRepository.findById(userId).orElseThrow {
             NotFoundException("User with id $userId not found")
         }
@@ -279,7 +290,13 @@ class ProjectService(
         )
     }
 
-    fun searchProjectsByCourseForUser(userId: String, courseId: UUID, query: String, page: Int = 0, size: Int = 10): PaginatedResponse<ProjectResponse> {
+    fun searchProjectsByCourseForUser(
+        userId: String,
+        courseId: UUID,
+        query: String,
+        page: Int = 0,
+        size: Int = 10
+    ): PaginatedResponse<ProjectResponse> {
         val user = userRepository.findById(userId).orElseThrow {
             NotFoundException("User with id $userId not found")
         }
@@ -308,12 +325,20 @@ class ProjectService(
             Role.ADMIN, Role.MANAGER -> {
                 projectRepository.findByCourseAndTitleContainingIgnoreCase(course, query, pageable)
             }
+
             Role.FACULTY -> {
                 projectRepository.findByCourseAndTitleContainingIgnoreCase(course, query, pageable)
             }
+
             Role.STUDENT -> {
-                projectRepository.findByCourseAndTitleContainingIgnoreCaseAndTeamMembersContaining(course, query, user, pageable)
+                projectRepository.findByCourseAndTitleContainingIgnoreCaseAndTeamMembersContaining(
+                    course,
+                    query,
+                    user,
+                    pageable
+                )
             }
+
             else -> {
                 Page.empty(pageable)
             }
@@ -351,24 +376,24 @@ class ProjectService(
     }
 
     fun getActiveProjectsByFaculty(facultyId: String): List<ProjectResponse> {
-        val faculty = userRepository.findById(facultyId).
-            orElseThrow { NotFoundException("Faculty with id $facultyId not found") }
+        val faculty =
+            userRepository.findById(facultyId).orElseThrow { NotFoundException("Faculty with id $facultyId not found") }
         val projects = projectRepository.findActiveProjectsByFaculty(facultyId)
         return projects.map { it.toProjectResponse() }
     }
 
     @Transactional
-    fun approveProject(projectId: UUID, userId: String){
+    fun approveProject(projectId: UUID, userId: String) {
         val user = userRepository.findById(userId).orElseThrow {
             NotFoundException("User not found")
         }
-        if (user.role != Role.ADMIN && user.role != Role.MANAGER || user.role != Role.FACULTY) {
+        if (user.role != Role.ADMIN && user.role != Role.MANAGER && user.role != Role.FACULTY) {
             throw IllegalArgumentException("U are not authorized to approve projects")
         }
-        val project = projectRepository.findById(projectId).orElseThrow{
+        val project = projectRepository.findById(projectId).orElseThrow {
             NotFoundException("Project with id $projectId not found")
         }
-        if (project.status != ProjectStatus.PROPOSED) {
+        if (project.status == ProjectStatus.COMPLETED) {
             throw IllegalArgumentException("Project cannot be approved in current status: ${project.status}")
         }
         project.status = ProjectStatus.ONGOING
@@ -377,28 +402,43 @@ class ProjectService(
     }
 
     @Transactional
-    fun rejectProject(projectId: UUID, userId: String){
-        val user = userRepository.findById(userId).orElseThrow{
+    fun rejectProject(projectId: UUID, userId: String) {
+        val user = userRepository.findById(userId).orElseThrow {
             NotFoundException("User not found")
         }
-        if(user.role != Role.ADMIN && user.role != Role.MANAGER || user.role != Role.FACULTY) {
+        if (user.role != Role.ADMIN && user.role != Role.MANAGER && user.role != Role.FACULTY) {
             throw IllegalArgumentException("U are not authorized to reject projects")
         }
-        val project = projectRepository.findById(projectId). orElseThrow {
+        val project = projectRepository.findById(projectId).orElseThrow {
             NotFoundException("Project with id $projectId not found")
         }
-        if (project.status != ProjectStatus.PROPOSED) {
+        if (project.status == ProjectStatus.COMPLETED) {
             throw IllegalArgumentException("Project cannot be rejected in current status: ${project.status}")
         }
         project.status = ProjectStatus.REJECTED
         project.updatedAt = Timestamp.from(Instant.now())
         projectRepository.save(project)
     }
+
+    @Transactional
+    fun reProposeProject(projectId: UUID, userId: String) {
+        val user = userRepository.findById(userId).orElseThrow {
+            NotFoundException("User not found")
+        }
+        val project = projectRepository.findById(projectId).orElseThrow {
+            NotFoundException("Project with id $projectId not found")
+        }
+        if (project.status != ProjectStatus.REJECTED) {
+            throw IllegalArgumentException("Project cannot be re-proposed in current status: ${project.status}")
+        }
+        project.status = ProjectStatus.PROPOSED
+        project.updatedAt = Timestamp.from(Instant.now())
+        projectRepository.save(project)
+    }
 }
 
 
-
-private fun createSort(sortBy: String, sortOrder: String): Sort {
-    val direction = if (sortOrder.lowercase() == "desc") Sort.Direction.DESC else Sort.Direction.ASC
-    return Sort.by(direction, sortBy)
-}
+    private fun createSort(sortBy: String, sortOrder: String): Sort {
+        val direction = if (sortOrder.lowercase() == "desc") Sort.Direction.DESC else Sort.Direction.ASC
+        return Sort.by(direction, sortBy)
+    }
