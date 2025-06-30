@@ -35,7 +35,6 @@ data class KanbanTaskResponse(
     val description: String?,
     val position: Int,
     val createdBy: UserResponse,
-    val assignedTo: UserResponse?,
     val createdAt: Timestamp,
     val updatedAt: Timestamp
 )
@@ -64,7 +63,6 @@ fun KanbanTask.toTaskResponse(): KanbanTaskResponse {
         description = this.description,
         position = this.position,
         createdBy = this.createdBy.toUserResponse(),
-        assignedTo = this.assignedTo?.toUserResponse(),
         createdAt = this.createdAt,
         updatedAt = this.updatedAt
     )

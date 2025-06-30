@@ -13,7 +13,8 @@ import java.util.*
 @RequestMapping("/kanban")
 class KanbanController(
     private val kanbanService: KanbanService
-) {    @GetMapping("/project/{projectId}")
+) {
+    @GetMapping("/project/{projectId}")
     fun getKanbanBoard(@PathVariable projectId: UUID): ResponseEntity<Any> {
         return try {
             val board = kanbanService.getOrCreateBoardForProject(projectId)

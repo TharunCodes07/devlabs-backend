@@ -1,5 +1,6 @@
 package com.devlabs.devlabsbackend.team.service
 
+import com.devlabs.devlabsbackend.core.config.CacheConfig
 import com.devlabs.devlabsbackend.core.exception.NotFoundException
 import com.devlabs.devlabsbackend.team.domain.DTO.CreateTeamRequest
 import com.devlabs.devlabsbackend.team.domain.DTO.TeamResponse
@@ -9,6 +10,9 @@ import com.devlabs.devlabsbackend.team.repository.TeamRepository
 import com.devlabs.devlabsbackend.user.domain.Role
 import com.devlabs.devlabsbackend.user.repository.UserRepository
 import com.devlabs.devlabsbackend.user.service.toUserResponse
+import org.springframework.cache.annotation.CacheEvict
+import org.springframework.cache.annotation.Cacheable
+import org.springframework.cache.annotation.Caching
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
@@ -36,6 +40,10 @@ class TeamService(
     private val teamRepository: TeamRepository,
     private val userRepository: UserRepository
 ) {
+    @CacheEvict(
+        value = [CacheConfig.TEAM_CACHE], 
+        allEntries = true
+    )
     fun createTeam(teamData: CreateTeamRequest, creatorId: String): Team {
         val creator = userRepository.findById(creatorId).orElseThrow {
             NotFoundException("User with id $creatorId not found")
@@ -68,6 +76,10 @@ class TeamService(
         return teamRepository.save(team)
     }
 
+    @Cacheable(
+        value = [CacheConfig.TEAM_CACHE], 
+        key = "'teams_all_' + #page + '_' + #size"
+    )
     fun getAllTeams(page: Int = 0, size: Int = 10): PaginatedResponse<TeamResponse> {
         val pageable: Pageable = PageRequest.of(page, size)
         val teamsPage: Page<Team> = teamRepository.findAllWithMembersAndProjects(pageable)
@@ -81,7 +93,13 @@ class TeamService(
                 total_count = teamsPage.totalElements.toInt()
             )
         )
-    }    fun getTeamsByUser(userId: String, page: Int = 0, size: Int = 10, sortBy: String = "name", sortOrder: String = "asc"): PaginatedResponse<TeamResponse> {
+    }    
+    
+    @Cacheable(
+        value = [CacheConfig.TEAM_CACHE], 
+        key = "'teams_user_' + #userId + '_' + #page + '_' + #size + '_' + #sortBy + '_' + #sortOrder"
+    )
+    fun getTeamsByUser(userId: String, page: Int = 0, size: Int = 10, sortBy: String = "name", sortOrder: String = "asc"): PaginatedResponse<TeamResponse> {
         val user = userRepository.findById(userId).orElseThrow {
             NotFoundException("User with id $userId not found")
         }
@@ -103,6 +121,7 @@ class TeamService(
         )
     }
 
+    @Cacheable(value = [CacheConfig.TEAM_CACHE], key = "'team_' + #teamId")
     fun getTeamById(teamId: UUID): Team {
         val team = teamRepository.findById(teamId).orElseThrow {
             NotFoundException("Team with id $teamId not found")
@@ -113,8 +132,13 @@ class TeamService(
         return team
     }
 
+    @CacheEvict(value = [CacheConfig.TEAM_CACHE], allEntries = true)
     fun updateTeam(teamId: UUID, updateData: UpdateTeamRequest): Team {
-        val team = getTeamById(teamId)
+        val team = teamRepository.findById(teamId).orElseThrow {
+            NotFoundException("Team with id $teamId not found")
+        }
+        team.members.size
+        team.projects.size
 
         updateData.name?.let { team.name = it }
         updateData.description?.let { team.description = it }
@@ -141,6 +165,7 @@ class TeamService(
     }
 
 
+    @CacheEvict(value = [CacheConfig.TEAM_CACHE], allEntries = true)
     fun deleteTeam(teamId: UUID) {
         if (!teamRepository.existsById(teamId)) {
             throw NotFoundException("Team with id $teamId not found")
@@ -148,6 +173,10 @@ class TeamService(
         teamRepository.deleteById(teamId)
     }
 
+    @Cacheable(
+        value = [CacheConfig.TEAM_CACHE], 
+        key = "'teams_search_' + #userId + '_' + #query + '_' + #page + '_' + #size"
+    )
     fun searchTeamsByUser(userId: String, query: String, page: Int = 0, size: Int = 10): PaginatedResponse<TeamResponse> {
         val user = userRepository.findById(userId).orElseThrow {
             NotFoundException("User with id $userId not found")
@@ -184,6 +213,10 @@ class TeamService(
         )
     }
 
+    @Cacheable(
+        value = [CacheConfig.USER_CACHE], 
+        key = "'students_search_' + #query"
+    )
     fun searchStudents(query: String): List<com.devlabs.devlabsbackend.user.domain.DTO.UserResponse> {
         val students = userRepository.findByNameOrEmailContainingIgnoreCase(query)
             .filter { it.role == Role.STUDENT }

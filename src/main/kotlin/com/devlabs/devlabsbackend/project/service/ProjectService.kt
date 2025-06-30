@@ -435,8 +435,39 @@ class ProjectService(
         project.updatedAt = Timestamp.from(Instant.now())
         projectRepository.save(project)
     }
-}
 
+    @Transactional
+    fun completeProject(projectId: UUID, userId: String) {
+        val user = userRepository.findById(userId).orElseThrow {
+            NotFoundException("User not found")
+        }
+        val project = projectRepository.findById(projectId).orElseThrow {
+            NotFoundException("Project with id $projectId not found")
+        }
+        if (project.status != ProjectStatus.ONGOING) {
+            throw IllegalArgumentException("Project cannot be completed in current status: ${project.status}")
+        }
+        project.status = ProjectStatus.COMPLETED
+        project.updatedAt = Timestamp.from(Instant.now())
+        projectRepository.save(project)
+    }
+
+    @Transactional
+    fun revertProjectCompletion(projectId: UUID, userId: String) {
+        val user = userRepository.findById(userId).orElseThrow {
+            NotFoundException("User not found")
+        }
+        val project = projectRepository.findById(projectId).orElseThrow {
+            NotFoundException("Project with id $projectId not found")
+        }
+        if (project.status != ProjectStatus.COMPLETED) {
+            throw IllegalArgumentException("Project cannot be reverted in current status: ${project.status}")
+        }
+        project.status = ProjectStatus.ONGOING
+        project.updatedAt = Timestamp.from(Instant.now())
+        projectRepository.save(project)
+    }
+}
 
     private fun createSort(sortBy: String, sortOrder: String): Sort {
         val direction = if (sortOrder.lowercase() == "desc") Sort.Direction.DESC else Sort.Direction.ASC

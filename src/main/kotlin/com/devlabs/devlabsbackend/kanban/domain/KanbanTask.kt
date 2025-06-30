@@ -28,10 +28,6 @@ class KanbanTask(
     @JoinColumn(name = "created_by")
     var createdBy: User,
     
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "assigned_to", nullable = true)
-    var assignedTo: User? = null,
-    
     val createdAt: Timestamp = Timestamp.from(Instant.now()),
     var updatedAt: Timestamp = Timestamp.from(Instant.now())
 )

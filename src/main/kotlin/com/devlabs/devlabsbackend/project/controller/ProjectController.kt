@@ -305,4 +305,45 @@ class ProjectController(
         }
     }
 
+    @PutMapping("/{projectId}/complete")
+    fun completeProject(@PathVariable projectId: UUID): ResponseEntity<Any> {
+        val userId = SecurityUtils.getCurrentUserId()
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(mapOf("error" to "User not authenticated"))
+        }
+        return try {
+            projectService.completeProject(projectId, userId)
+            ResponseEntity.ok(mapOf("success" to true, "message" to "Project completed successfully"))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to complete project: ${e.message}"))
+        }
+    }
+
+    @PutMapping("/{projectId}/revert-completion")
+    fun revertProjectCompletion(@PathVariable projectId: UUID): ResponseEntity<Any> {
+        val userId = SecurityUtils.getCurrentUserId()
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(mapOf("error" to "User not authenticated"))
+        }
+        return try {
+            projectService.revertProjectCompletion(projectId, userId)
+            ResponseEntity.ok(mapOf("success" to true, "message" to "Project completion reverted successfully"))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to revert project completion: ${e.message}"))
+        }
+    }
 }
