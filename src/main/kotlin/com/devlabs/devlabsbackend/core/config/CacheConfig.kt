@@ -24,8 +24,7 @@ class CacheConfig {
         const val SEMESTER_CACHE = "semesters"
         const val NOTIFICATION_CACHE = "notifications"
         const val KANBAN_CACHE = "kanban"
-        
-        // Cache TTL configurations (in minutes)
+
         const val SHORT_TTL = 5L // 5 min
         const val MEDIUM_TTL = 10L // 10 min
         const val LONG_TTL = 30L // 30 min

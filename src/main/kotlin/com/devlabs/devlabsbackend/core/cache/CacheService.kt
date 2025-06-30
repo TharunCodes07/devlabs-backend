@@ -32,7 +32,7 @@ class CacheService {
     /**
      * Get a value from cache with type casting
      */
-    inline fun <reified T> get(key: String, clazz: Class<T>): T? {
+    fun <T> get(key: String, clazz: Class<T>): T? {
         val value = redisTemplate.opsForValue().get(key)
         return if (value != null && clazz.isInstance(value)) {
             clazz.cast(value)

@@ -17,6 +17,7 @@ import org.springframework.context.annotation.Primary
 import org.springframework.data.redis.cache.RedisCacheConfiguration
 import org.springframework.data.redis.cache.RedisCacheManager
 import org.springframework.data.redis.connection.RedisConnectionFactory
+import org.springframework.data.redis.connection.RedisPassword
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory
 import org.springframework.data.redis.connection.lettuce.LettucePoolingClientConfiguration
@@ -56,7 +57,7 @@ class RedisConfig {
         val config = RedisStandaloneConfiguration()
         config.hostName = redisHost
         config.port = redisPort
-        config.password = redisPassword
+        config.password = RedisPassword.of(redisPassword)
         config.database = redisDatabase
 
         val poolConfig = GenericObjectPoolConfig<Any>()

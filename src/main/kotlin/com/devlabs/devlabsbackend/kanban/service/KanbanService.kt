@@ -1,9 +1,12 @@
 package com.devlabs.devlabsbackend.kanban.service
 
 import com.devlabs.devlabsbackend.core.exception.NotFoundException
-import com.devlabs.devlabsbackend.kanban.domain.*
 import com.devlabs.devlabsbackend.kanban.domain.DTO.*
-import com.devlabs.devlabsbackend.kanban.repository.*
+import com.devlabs.devlabsbackend.kanban.domain.KanbanBoard
+import com.devlabs.devlabsbackend.kanban.domain.KanbanTask
+import com.devlabs.devlabsbackend.kanban.repository.KanbanBoardRepository
+import com.devlabs.devlabsbackend.kanban.repository.KanbanColumnRepository
+import com.devlabs.devlabsbackend.kanban.repository.KanbanTaskRepository
 import com.devlabs.devlabsbackend.project.repository.ProjectRepository
 import com.devlabs.devlabsbackend.user.repository.UserRepository
 import jakarta.transaction.Transactional
@@ -39,7 +42,6 @@ class KanbanService(
             column.tasks.size
             column.tasks.forEach { task ->
                 task.createdBy.name
-                task.assignedTo?.name
             }
         }
         
@@ -69,7 +71,6 @@ class KanbanService(
             position = maxPosition + 1,
             column = column,
             createdBy = createdBy,
-            assignedTo = assignedTo
         )
         
         val savedTask = kanbanTaskRepository.save(task)
@@ -82,7 +83,6 @@ class KanbanService(
         }
 
         task.createdBy.name
-        task.assignedTo?.name
         task.column.board.project.team.members.size
         
         val requester = userRepository.findById(userId).orElseThrow {
@@ -95,12 +95,6 @@ class KanbanService(
         
         request.title?.let { task.title = it }
         request.description?.let { task.description = it }
-        request.assignedToId?.let { assignedToId ->
-            val assignedTo = userRepository.findById(assignedToId).orElseThrow {
-                NotFoundException("User with id $assignedToId not found")
-            }
-            task.assignedTo = assignedTo
-        }
         
         task.updatedAt = Timestamp.from(Instant.now())
         
@@ -118,7 +112,6 @@ class KanbanService(
         }
 
         task.createdBy.name
-        task.assignedTo?.name
         task.column.board.project.team.members.size
         
         val requester = userRepository.findById(userId).orElseThrow {
@@ -152,7 +145,6 @@ class KanbanService(
         }
 
         task.createdBy.name
-        task.assignedTo?.name
         
         return task.toTaskResponse()
     }
