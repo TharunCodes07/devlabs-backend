@@ -107,26 +107,20 @@ class SemesterService
 
         return when (user.role) {
             Role.FACULTY -> {
-                // Find all active courses where the user is an instructor
                 val facultyCourses = courseRepository.findCoursesByActiveSemestersAndInstructor(user)
 
-                // Extract unique semesters from the courses
                 val semesterIds = facultyCourses.mapNotNull { it.semester.id }.toSet()
 
-                // If no courses found for the faculty, return an empty list
                 if (semesterIds.isEmpty()) {
                     emptyList()
                 } else {
-                    // Get all semesters by their IDs
                     semesterRepository.findAllById(semesterIds).map { it.toSemesterResponse() }
                 }
             }
             Role.ADMIN, Role.MANAGER -> {
-                // Admins and managers can see all semesters
                 getAllActiveSemesters()
             }
             else -> {
-                // For other roles like STUDENT, return empty list or throw exception
                 emptyList()
             }
         }

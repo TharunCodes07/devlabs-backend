@@ -145,7 +145,7 @@ class RubricsService(
             NotFoundException("Rubrics with id $id not found")
         }
         when (user.role) {
-            Role.ADMIN, Role.MANAGER -> { /* Allow all */ }
+            Role.ADMIN, Role.MANAGER -> { }
             Role.FACULTY -> {
                 if (rubrics.createdBy.id != user.id) {
                     throw ForbiddenException("Faculty can only delete rubrics they created")

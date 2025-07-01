@@ -55,33 +55,27 @@ class SemesterController(val semesterService: SemesterService, val userService: 
 
     @GetMapping("/active")
     fun getAllActiveSemesters(): ResponseEntity<Any> {
-        // Get the user group from JWT
         val rawUserGroup = SecurityUtils.getCurrentJwtClaim("groups")
             ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("message" to "User not authenticated"))
 
-        // Parse the group from the format "[/admin]" -> "admin"
         val userGroup = rawUserGroup.trim().removePrefix("[/").removeSuffix("]")
         println("User group after parsing: $userGroup")
 
         return try {
             when {
-                // If user is admin, return all semesters (not just active ones)
                 userGroup.equals("admin", ignoreCase = true) -> {
                     val allSemesters = semesterService.getAllActiveSemesters()
                     ResponseEntity.ok(allSemesters)
                 }
 
-                // If user is faculty, return only semesters assigned to that faculty
                 userGroup.equals("faculty", ignoreCase = true) -> {
                     val currentUserId = SecurityUtils.getCurrentUserId()
                         ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("message" to "User not authenticated"))
 
-                    // Get faculty's assigned semesters
                     val facultySemesters = semesterService.getFacultyAssignedSemesters(currentUserId)
                     ResponseEntity.ok(facultySemesters)
                 }
 
-                // For any other user type, return unauthorized
                 else -> {
                     ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(mapOf("message" to "Unauthorized access - $userGroup role cannot access semester information"))

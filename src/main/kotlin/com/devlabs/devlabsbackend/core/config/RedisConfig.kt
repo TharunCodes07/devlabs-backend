@@ -82,18 +82,15 @@ class RedisConfig {
         val template = RedisTemplate<String, Any>()
         template.connectionFactory = redisConnectionFactory()
 
-        // Configure Jackson ObjectMapper for Kotlin
         val objectMapper = ObjectMapper().apply {
             registerKotlinModule()
             setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY)
             enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL)
         }
 
-        // Use String serializer for keys
         template.keySerializer = StringRedisSerializer()
         template.hashKeySerializer = StringRedisSerializer()
 
-        // Use Jackson serializer for values
         val jackson2JsonRedisSerializer = GenericJackson2JsonRedisSerializer(objectMapper)
         template.valueSerializer = jackson2JsonRedisSerializer
         template.hashValueSerializer = jackson2JsonRedisSerializer

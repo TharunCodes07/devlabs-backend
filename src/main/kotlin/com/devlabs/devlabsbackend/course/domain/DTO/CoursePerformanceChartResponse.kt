@@ -8,7 +8,7 @@ data class CoursePerformanceChartResponse(
     val reviewName: String,
     val startDate: LocalDate,
     val endDate: LocalDate,
-    val status: String, // "completed", "missed", "ongoing"
+    val status: String,
     val showResult: Boolean,
     val score: Double? = null,
     val totalScore: Double? = null,

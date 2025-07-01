@@ -77,7 +77,6 @@ class CourseService(
         val course = courseRepository.findById(courseId).orElseThrow {
             NotFoundException("Could not find course with id $courseId")
         }
-        // Force initialization of students collection to avoid LazyInitializationException
         course.students.size
         val users = userRepository.findAllById(studentId)
         course.students.removeAll(users)
@@ -168,21 +167,16 @@ class CourseService(
             courses
         }
         return finalCourses.map { course ->
-            // Get all reviews for this student and course
             val allReviews = individualScoreRepository.findDistinctReviewsByParticipantAndCourse(student, course)
             
-            // Filter to only include published reviews
             val publishedReviews = allReviews.filter { review -> 
                 review.isPublished == true 
             }
             
-            // Calculate scores and counts based only on published reviews
             val reviewCount = publishedReviews.size
             val averageScorePercentage = if (reviewCount == 0) {
-                // Default to 100% when no published reviews exist yet
                 100.0
             } else {
-                // Calculate average score percentage from published reviews only
                 val allPublishedScores = publishedReviews.flatMap { review ->
                     individualScoreRepository.findByParticipantAndReviewAndCourse(student, review, course)
                 }
@@ -236,12 +230,10 @@ class CourseService(
 
         val allReviews = individualScoreRepository.findDistinctReviewsByParticipantAndCourse(student, course)
         
-        // Filter to only include published reviews for students
         val publishedReviews = allReviews.filter { review -> 
             review.isPublished == true 
         }
 
-        // If no published reviews exist, return empty list (default data)
         if (publishedReviews.isEmpty()) {
             return emptyList()
         }
@@ -369,7 +361,6 @@ class CourseService(
 
         val direction = if (sortOrder.uppercase() == "DESC") Sort.Direction.DESC else Sort.Direction.ASC
 
-        // Sort the students collection manually
         val sortedStudents = when (sortBy.lowercase()) {
             "name" -> if (direction == Sort.Direction.ASC)
                 studentUsers.sortedBy { it.name }
@@ -560,7 +551,7 @@ class CourseService(
         }
 
         val totalElements = sortedStudents.size
-        val totalPages = (totalElements + size - 1) / size // Ceiling division
+        val totalPages = (totalElements + size - 1) / size 
         val startIndex = page * size
         val endIndex = minOf(startIndex + size, totalElements)
 

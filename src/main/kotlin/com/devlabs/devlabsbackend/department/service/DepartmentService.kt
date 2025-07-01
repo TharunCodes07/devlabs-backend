@@ -35,7 +35,6 @@ class DepartmentService(
         val departmentIds = departmentIdsPage.content
         val departments = if (departmentIds.isNotEmpty()) {
             departmentRepository.findAllById(departmentIds).map { department ->
-                // Force initialization of batches collection
                 department.batches.size
                 department
             }

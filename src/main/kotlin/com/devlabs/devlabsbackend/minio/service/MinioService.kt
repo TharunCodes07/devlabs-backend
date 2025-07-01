@@ -13,7 +13,6 @@ class MinioService @Autowired constructor(
     private val minioClient: MinioClient,
     @Qualifier("minioBucketName") private val bucketName: String
 ) {
-    // List of allowed file types for upload
     private val allowedFileTypes = listOf(
         "image/jpeg", "image/png", "image/gif", "image/webp",
         "application/pdf", "application/msword",
@@ -21,36 +20,23 @@ class MinioService @Autowired constructor(
         "text/plain", "application/zip", "application/x-rar-compressed"
     )
 
-    /**
-     * Upload a file to Minio storage
-     * @param file The file to upload
-     * @param customName Optional custom name for the file
-     * @param directoryPath Optional directory path for organizing files
-     * @return The object name (key) in Minio
-     */
     fun uploadFile(file: MultipartFile, customName: String? = null, directoryPath: String? = null): String {
-        // Validate file type
         if (!isValidFileType(file.contentType)) {
             throw IllegalArgumentException("File type not allowed: ${file.contentType}")
         }
 
-        // Generate object name with directory path
         val fileName = if (customName.isNullOrBlank()) {
-            // Default naming with UUID if no custom name provided
             UUID.randomUUID().toString() + "_" + file.originalFilename?.replace(" ", "_")
         } else {
-            // Use custom name but check if it already exists
             generateUniqueObjectName(customName, directoryPath)
         }
 
-        // Build full object path
         val objectName = if (directoryPath.isNullOrBlank()) {
             fileName
         } else {
             "${directoryPath.trim('/')}/$fileName"
         }
 
-        // Upload the file to Minio
         minioClient.putObject(
             PutObjectArgs.builder()
                 .bucket(bucketName)
@@ -63,27 +49,17 @@ class MinioService @Autowired constructor(
         return objectName
     }
 
-    /**
-     * Generate a unique object name by checking if the custom name already exists in the bucket
-     * If it exists, append a UUID to make it unique
-     * @param customName The custom name to check
-     * @param directoryPath Optional directory path for the file
-     * @return A unique object name
-     */
     private fun generateUniqueObjectName(customName: String, directoryPath: String? = null): String {
         val sanitizedName = customName.replace(" ", "_")
         
-        // Build full path for existence check
         val fullPath = if (directoryPath.isNullOrBlank()) {
             sanitizedName
         } else {
             "${directoryPath.trim('/')}/$sanitizedName"
         }
 
-        // Check if object already exists
         val exists = objectExists(fullPath)
 
-        // If exists, append UUID to make it unique
         return if (exists) {
             "$sanitizedName-${UUID.randomUUID()}"
         } else {
@@ -91,11 +67,6 @@ class MinioService @Autowired constructor(
         }
     }
 
-    /**
-     * Check if an object exists in the bucket
-     * @param objectName The name of the object to check
-     * @return true if the object exists, false otherwise
-     */
     private fun objectExists(objectName: String): Boolean {
         return try {
             minioClient.statObject(
@@ -110,10 +81,6 @@ class MinioService @Autowired constructor(
         }
     }
 
-    /**
-     * Delete a file from Minio storage
-     * @param objectName The name of the object to delete
-     */
     fun deleteFile(objectName: String) {
         minioClient.removeObject(
             RemoveObjectArgs.builder()
@@ -123,21 +90,11 @@ class MinioService @Autowired constructor(
         )
     }
 
-    /**
-     * Check if file type is allowed
-     * @param contentType The content type to check
-     * @return true if the content type is allowed, false otherwise
-     */
     private fun isValidFileType(contentType: String?): Boolean {
         if (contentType == null) return false
         return allowedFileTypes.contains(contentType)
     }
 
-    /**
-     * Get a file from Minio storage
-     * @param objectName The name of the object to get
-     * @return The input stream of the file
-     */
     fun getFile(objectName: String): InputStream {
         return minioClient.getObject(
             GetObjectArgs.builder()
@@ -147,12 +104,6 @@ class MinioService @Autowired constructor(
         )
     }
 
-    /**
-     * Generate a pre-signed URL for accessing an object
-     * @param objectName The name of the object
-     * @param expirySeconds How long the URL should be valid for (in seconds)
-     * @return The pre-signed URL for the object
-     */
     fun getObjectUrl(objectName: String, expirySeconds: Int = 7 * 24 * 3600): String {
         return minioClient.getPresignedObjectUrl(
             GetPresignedObjectUrlArgs.builder()
@@ -164,11 +115,6 @@ class MinioService @Autowired constructor(
         )
     }
 
-    /**
-     * List files in a specific directory path
-     * @param directoryPath The directory path to list files from
-     * @return List of file information
-     */
     fun listFiles(directoryPath: String): List<Map<String, Any>> {
         val prefix = if (directoryPath.isBlank()) "" else "${directoryPath.trim('/')}/"
         
@@ -193,11 +139,6 @@ class MinioService @Autowired constructor(
         }.toList()
     }
 
-    /**
-     * Download all files in a directory as a ZIP
-     * @param directoryPath The directory path to download files from
-     * @return InputStream of the ZIP file
-     */
     fun downloadDirectoryAsZip(directoryPath: String): InputStream {
         val prefix = if (directoryPath.isBlank()) "" else "${directoryPath.trim('/')}/"
         
@@ -222,7 +163,6 @@ class MinioService @Autowired constructor(
                         .build()
                 )
 
-                // Use only the filename for the ZIP entry (remove directory structure)
                 val fileName = result.objectName().substringAfterLast('/')
                 val zipEntry = java.util.zip.ZipEntry(fileName)
                 zipOutputStream.putNextEntry(zipEntry)
@@ -238,11 +178,6 @@ class MinioService @Autowired constructor(
         return java.io.FileInputStream(tempZipFile)
     }
 
-    /**
-     * Delete all files in a directory
-     * @param directoryPath The directory path to delete files from
-     * @return Number of files deleted
-     */
     fun deleteDirectory(directoryPath: String): Int {
         val prefix = if (directoryPath.isBlank()) "" else "${directoryPath.trim('/')}/"
         

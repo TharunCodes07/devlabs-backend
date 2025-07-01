@@ -96,7 +96,6 @@ class BatchService(
         sortBy: String = "name",
         sortOrder: String = "asc"
     ): PaginatedResponse<UserResponse> {
-        // First verify that the batch exists
         batchRepository.findById(batchId).orElseThrow {
             NotFoundException("Batch with id $batchId not found")
         }
@@ -223,7 +222,6 @@ class BatchService(
         sortBy: String = "name",
         sortOrder: String = "asc"
     ): PaginatedResponse<UserResponse> {
-        // First verify that the batch exists
         batchRepository.findById(batchId).orElseThrow {
             NotFoundException("Batch with id $batchId not found")
         }
@@ -246,7 +244,6 @@ class BatchService(
     }
 
     fun getAllActiveBatchesForUser(userId: String): List<BatchResponse> {
-        // First verify that the user exists
         userRepository.findById(userId).orElseThrow {
             NotFoundException("User with id $userId not found")
         }

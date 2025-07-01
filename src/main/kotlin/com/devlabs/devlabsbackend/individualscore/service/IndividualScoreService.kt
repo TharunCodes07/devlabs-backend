@@ -223,7 +223,6 @@ class IndividualScoreService(
                     existingScore.comment = criterionScore.comment
                     existingScore
                 } else {
-                    // Create new score
                     IndividualScore(
                         participant = participant,
                         criterion = criterion,
@@ -251,12 +250,10 @@ class IndividualScoreService(
             NotFoundException("Project with id $projectId not found")
         }
 
-        // Check if project is part of the review
         if (!isProjectAssociatedWithReview(review, project)) {
             throw IllegalArgumentException("Project is not part of this review")
         }
 
-        // Eagerly fetch the courses to avoid lazy loading issues
         val courses = project.courses.toList()
         val courseEvaluations = courses.map { course ->
             val hasScores = individualScoreRepository.findByReviewAndProjectAndCourse(
@@ -354,15 +351,12 @@ class IndividualScoreService(
         if (semesters.isNotEmpty()) {
             val semesterEntities = semesterRepository.findAllByIdWithCourses(semesters.toList())
             semesterEntities.forEach { semester ->
-                // Get all courses in this semester
                 val semesterCourses = semester.courses
 
-                // Find reviews assigned to courses in this semester
                 if (review.courses.any { course -> semesterCourses.any { it.id == course.id } }) {
                     return true
                 }
 
-                // Find reviews assigned to batches in this semester
                 val semesterBatches = semester.batches
                 if (review.batches.any { batch -> semesterBatches.any { it.id == batch.id } }) {
                     return true
@@ -378,22 +372,18 @@ class IndividualScoreService(
 private fun checkCourseEvaluationAccess(user: User, review: Review, project: Project, course: com.devlabs.devlabsbackend.course.domain.Course) {
     when (user.role) {
         Role.ADMIN, Role.MANAGER -> {
-            // Admins and managers have access to all evaluations
             return
         }
         Role.FACULTY -> {
-            // Faculty can only access courses they teach
             if (!course.instructors.contains(user)) {
                 throw ForbiddenException("Faculty can only access evaluations for courses they teach")
             }
         }
         Role.STUDENT -> {
-            // Students can only access their own evaluations in published reviews
             if (review.isPublished != true) {
                 throw ForbiddenException("Students can only access published reviews")
             }
 
-            // Check if student is a member of the project team
             if (!project.team.members.contains(user)) {
                 throw ForbiddenException("Students can only access their own project evaluations")
             }

@@ -47,21 +47,17 @@ class CacheConfig {
             )
 
         val cacheConfigurations = mapOf(
-            // Short-lived caches (5 minutes)
             NOTIFICATION_CACHE to defaultConfig.entryTtl(Duration.ofMinutes(SHORT_TTL)),
             KANBAN_CACHE to defaultConfig.entryTtl(Duration.ofMinutes(SHORT_TTL)),
-            
-            // Medium-lived caches (30 minutes)
+
             USER_CACHE to defaultConfig.entryTtl(Duration.ofMinutes(MEDIUM_TTL)),
             TEAM_CACHE to defaultConfig.entryTtl(Duration.ofMinutes(MEDIUM_TTL)),
             EVALUATION_CACHE to defaultConfig.entryTtl(Duration.ofMinutes(MEDIUM_TTL)),
-            
-            // Long-lived caches (1 hour)
+
             PROJECT_CACHE to defaultConfig.entryTtl(Duration.ofMinutes(LONG_TTL)),
             COURSE_CACHE to defaultConfig.entryTtl(Duration.ofMinutes(LONG_TTL)),
             RUBRICS_CACHE to defaultConfig.entryTtl(Duration.ofMinutes(LONG_TTL)),
-            
-            // Extra long-lived caches (4 hours)
+
             DEPARTMENT_CACHE to defaultConfig.entryTtl(Duration.ofMinutes(EXTRA_LONG_TTL)),
             SEMESTER_CACHE to defaultConfig.entryTtl(Duration.ofMinutes(EXTRA_LONG_TTL))
         )

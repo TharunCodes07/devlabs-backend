@@ -10,12 +10,6 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter
 
 
-/**
- * This class is responsible for converting a JWT token into a Spring Security `JwtAuthenticationToken`.
- * It extracts roles from the JWT claims and assigns them as authorities to the authentication token.
- *
- * The `convert` method takes a JWT token and returns a `JwtAuthenticationToken` with the extracted authorities.
- */
 class KeycloakJwtTokenConverter(
     private val jwtGrantedAuthoritiesConverter: JwtGrantedAuthoritiesConverter,
 ) : Converter<Jwt, JwtAuthenticationToken> {
@@ -25,14 +19,11 @@ class KeycloakJwtTokenConverter(
     override fun convert(jwt: Jwt): JwtAuthenticationToken {
         logger.debug("Converting JWT: {}", jwt.claims.keys)
 
-        // Ensure we always have an authenticated user by creating a basic authentication
         val authorities = mutableSetOf<GrantedAuthority>()
 
-        // Add a default USER role to ensure authentication works
         authorities.add(SimpleGrantedAuthority("ROLE_USER"))
 
         try {
-            // Try to extract client roles
             val clientRolesMap = jwt.getClaimAsMap("resource_access")
             clientRolesMap?.forEach { (client, value) ->
                 if (value is Map<*, *>) {
@@ -46,7 +37,6 @@ class KeycloakJwtTokenConverter(
                 }
             }
 
-            // Try to extract realm roles
             val realmAccess = jwt.getClaimAsMap("realm_access")
             val realmRoles = realmAccess?.get("roles") as? Collection<*>
             realmRoles?.filterIsInstance<String>()?.forEach { role ->
@@ -56,10 +46,8 @@ class KeycloakJwtTokenConverter(
 
         } catch (e: Exception) {
             logger.error("Error extracting authorities from JWT", e)
-            // Continue with default authorities
         }
 
-        // Get the principal name - prefer the username if available
         val principalName = jwt.getClaimAsString("preferred_username")
             ?: jwt.getClaimAsString(JwtClaimNames.SUB)
             ?: "unknown"

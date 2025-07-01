@@ -7,59 +7,11 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
 
-/**
- * MinIO Blob Storage Controller
- * 
- * This controller provides endpoints for file upload with organized directory structure.
- * 
- * Directory Structure:
- * - Files can be organized in a hierarchical structure: teamId/projectId-projectName/reviewId-reviewName/
- * - All parameters are optional - provide only what you need for your directory structure
- * - If no teamId is provided, files are stored at the bucket root
- * 
- * Available Endpoints:
- * 
- * UPLOAD:
- * - POST /blob/upload - Upload a file with optional directory structure
- * - POST /blob/upload-structured - Alternative upload endpoint with detailed response
- * 
- * RETRIEVE:
- * - GET /blob/list - List all files in a specific directory
- * - GET /blob/file-info?objectName=... - Get information about a specific file
- * - GET /blob/download-zip - Download all files in a directory as ZIP
- * 
- * DELETE:
- * - DELETE /blob/delete?objectName=... - Delete a specific file
- * - DELETE /blob/delete-directory - Delete all files in a directory
- * 
- * Examples:
- * 1. Upload to review: POST /blob/upload with teamId, projectId, projectName, reviewId, reviewName
- * 2. List review files: GET /blob/list?teamId=team1&projectId=proj1&reviewId=review1
- * 3. Download all review files: GET /blob/download-zip?teamId=team1&projectId=proj1&reviewId=review1
- * 4. Delete review directory: DELETE /blob/delete-directory?teamId=team1&projectId=proj1&reviewId=review1
- * 
- * Response includes:
- * - objectName: Full path/name of the uploaded file in MinIO
- * - url: Pre-signed URL for accessing the file
- * - directoryPath: The directory structure used
- */
 @RestController
 @RequestMapping("/blob")
 class BlobController @Autowired constructor(
     private val minioService: MinioService
 ) {
-
-    /**
-     * Upload a file to Minio storage
-     * @param file The file to upload
-     * @param customName Optional custom name for the file
-     * @param teamId Optional team ID for directory structure
-     * @param projectId Optional project ID for directory structure
-     * @param projectName Optional project name for directory structure
-     * @param reviewId Optional review ID for directory structure
-     * @param reviewName Optional review name for directory structure
-     * @return The object name (key) and URL in Minio
-     */
     @PostMapping("/upload")
     fun uploadFile(
         @RequestParam("file") file: MultipartFile,
@@ -75,7 +27,6 @@ class BlobController @Autowired constructor(
                 return ResponseEntity.badRequest().body(mapOf("error" to "File is empty"))
             }
 
-            // Build directory path from provided parameters
             val directoryPath = buildDirectoryPath(teamId, projectId, projectName, reviewId, reviewName)
 
             val objectName = minioService.uploadFile(file, customName, directoryPath)
@@ -93,13 +44,6 @@ class BlobController @Autowired constructor(
         }
     }
 
-    /**
-     * Upload a file to Minio storage using structured context
-     * @param file The file to upload
-     * @param customName Optional custom name for the file
-     * @param context Upload context containing directory structure parameters
-     * @return The object name (key) and URL in Minio
-     */
     @PostMapping("/upload-structured")
     fun uploadFileStructured(
         @RequestParam("file") file: MultipartFile,
@@ -115,7 +59,6 @@ class BlobController @Autowired constructor(
                 return ResponseEntity.badRequest().body(mapOf("error" to "File is empty"))
             }
 
-            // Create upload context
             val context = UploadContext(teamId, projectId, projectName, reviewId, reviewName)
             val directoryPath = context.toDirectoryPath()
 
@@ -142,10 +85,6 @@ class BlobController @Autowired constructor(
         }
     }
 
-    /**
-     * Delete a file from Minio storage
-     * @param objectName The name of the object to delete
-     */
     @DeleteMapping("/delete")
     fun deleteFile(@RequestParam("objectName") objectName: String): ResponseEntity<Map<String, String>> {
         return try {
@@ -157,15 +96,6 @@ class BlobController @Autowired constructor(
         }
     }
 
-    /**
-     * List files for a specific review/project/team
-     * @param teamId Optional team ID
-     * @param projectId Optional project ID  
-     * @param projectName Optional project name
-     * @param reviewId Optional review ID
-     * @param reviewName Optional review name
-     * @return List of files in the specified directory
-     */
     @GetMapping("/list")
     fun listFiles(
         @RequestParam("teamId", required = false) teamId: String?,
@@ -189,15 +119,6 @@ class BlobController @Autowired constructor(
         }
     }
 
-    /**
-     * Download all files in a directory as ZIP
-     * @param teamId Optional team ID
-     * @param projectId Optional project ID
-     * @param projectName Optional project name  
-     * @param reviewId Optional review ID
-     * @param reviewName Optional review name
-     * @return ZIP file containing all files in the directory
-     */
     @GetMapping("/download-zip")
     fun downloadDirectoryAsZip(
         @RequestParam("teamId", required = false) teamId: String?,
@@ -227,15 +148,6 @@ class BlobController @Autowired constructor(
         }
     }
 
-    /**
-     * Delete all files in a specific directory
-     * @param teamId Optional team ID
-     * @param projectId Optional project ID
-     * @param projectName Optional project name
-     * @param reviewId Optional review ID  
-     * @param reviewName Optional review name
-     * @return Number of files deleted
-     */
     @DeleteMapping("/delete-directory")
     fun deleteDirectory(
         @RequestParam("teamId", required = false) teamId: String?,
@@ -264,11 +176,6 @@ class BlobController @Autowired constructor(
         }
     }
 
-    /**
-     * Get file information by object name
-     * @param objectName The full object name/path
-     * @return File information and download URL
-     */
     @GetMapping("/file-info")
     fun getFileInfo(@RequestParam("objectName") objectName: String): ResponseEntity<Map<String, Any>> {
         return try {
@@ -286,16 +193,6 @@ class BlobController @Autowired constructor(
         }
     }
 
-    /**
-     * Build directory path from provided parameters
-     * Creates a hierarchical structure: teamId/projectId-projectName/reviewId-reviewName
-     * @param teamId The team ID
-     * @param projectId The project ID
-     * @param projectName The project name
-     * @param reviewId The review ID
-     * @param reviewName The review name
-     * @return The constructed directory path or null if no teamId provided
-     */
     private fun buildDirectoryPath(
         teamId: String?,
         projectId: String?,
@@ -331,9 +228,6 @@ class BlobController @Autowired constructor(
     }
 }
 
-/**
- * Data class for upload context parameters
- */
 data class UploadContext(
     val teamId: String? = null,
     val projectId: String? = null,
@@ -341,10 +235,6 @@ data class UploadContext(
     val reviewId: String? = null,
     val reviewName: String? = null
 ) {
-    /**
-     * Convert upload context to directory path
-     * @return The constructed directory path or null if no teamId provided
-     */
     fun toDirectoryPath(): String? {
         if (teamId.isNullOrBlank()) return null
 

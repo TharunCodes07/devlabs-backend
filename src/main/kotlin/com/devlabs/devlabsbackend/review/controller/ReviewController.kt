@@ -171,7 +171,6 @@ class ReviewController(
             val publicationStatus = reviewService.getPublicationStatus(reviewId)
             val review = reviewService.getReviewById(reviewId)
 
-            // Check if user can publish based on role and ownership
             val canPublish = when (user.role) {
                 Role.ADMIN, Role.MANAGER -> true
                 Role.FACULTY -> review.createdBy?.id == user.id

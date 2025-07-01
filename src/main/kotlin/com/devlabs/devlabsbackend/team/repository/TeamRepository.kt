@@ -33,7 +33,7 @@ interface TeamRepository : JpaRepository<Team, UUID> {    @RestResource(exported
     @RestResource(path = "allWithMembers")
     @Query("SELECT DISTINCT t FROM Team t LEFT JOIN FETCH t.members",
            countQuery = "SELECT COUNT(t) FROM Team t")
-    fun findAllWithMembers(pageable: Pageable): Page<Team>    // New queries to fetch teams with projects for project count
+    fun findAllWithMembers(pageable: Pageable): Page<Team>
     @RestResource(exported = false)
     @Query("SELECT DISTINCT t FROM Team t LEFT JOIN FETCH t.members LEFT JOIN FETCH t.projects")
     fun findAllWithMembersAndProjectsList(): List<Team>

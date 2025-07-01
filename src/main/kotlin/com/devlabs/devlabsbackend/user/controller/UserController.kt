@@ -121,7 +121,9 @@ class UserController (private val userService: UserService){
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(mapOf("message" to "Failed to fetch user: ${e.message}"))
         }
-    }    @GetMapping("/faculty")
+    }    
+    
+    @GetMapping("/faculty")
     fun getAllFaculty(): ResponseEntity<Any> {
         return try {
             val faculty = userService.getAllUsersByRole(Role.FACULTY)
@@ -146,12 +148,10 @@ class UserController (private val userService: UserService){
     @PostMapping("/keycloak-sync")    
     fun createUserFromKeycloakSync(@RequestBody request: KeycloakUserSyncRequest): ResponseEntity<Any> {
         return try {
-            // Get the current user ID from the JWT token
             val userIdFromToken = SecurityUtils.getCurrentUserId()
                 ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(mapOf("error" to "User not authenticated"))
             
-            // Map from KeycloakUserSyncRequest to KeycloakSyncRequest with the user ID from JWT
             val keycloakSyncRequest = KeycloakSyncRequest(
                 id = userIdFromToken,
                 name = request.name,

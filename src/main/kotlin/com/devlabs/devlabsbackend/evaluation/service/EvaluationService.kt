@@ -179,7 +179,6 @@ class EvaluationService(
         val rubrics = review.rubrics ?: throw NotFoundException("Review does not have associated rubrics")
         val maxPossibleScore = rubrics.criteria.sumOf { it.maxScore.toDouble() }.toFloat()
         
-        // Calculate average score
         val evaluationSummaries = evaluations.map { evaluation ->
             val scores = criterionScoreRepository.findByEvaluation(evaluation)
             val totalScore = scores.sumOf { it.score.toDouble() }.toFloat()

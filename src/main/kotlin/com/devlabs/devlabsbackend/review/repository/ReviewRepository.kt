@@ -35,18 +35,14 @@ interface ReviewRepository: JpaRepository<Review, UUID> {
     
     fun findByProjectsContaining(project: Project): List<Review>
     
-    // Retrieve recent reviews
     fun findByEndDateBefore(date: LocalDate, pageable: Pageable): Page<Review>
     
-    // Retrieve live reviews
     fun findByStartDateLessThanEqualAndEndDateGreaterThanEqual(
         currentDate: LocalDate, 
         currentDate2: LocalDate,
         pageable: Pageable
     ): Page<Review>
-      // Retrieve upcoming reviews
     fun findByStartDateAfter(date: LocalDate, pageable: Pageable): Page<Review>
-      // Find all reviews with all related entities eagerly loaded
     @Query("SELECT DISTINCT r FROM Review r " +
            "LEFT JOIN FETCH r.courses c " +
            "LEFT JOIN FETCH r.projects p " +

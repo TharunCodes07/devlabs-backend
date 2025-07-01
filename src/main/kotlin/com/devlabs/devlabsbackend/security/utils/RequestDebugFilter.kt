@@ -10,13 +10,6 @@ import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.filter.OncePerRequestFilter
 import java.io.IOException
 
-/**
- * This filter logs the details of incoming HTTP requests and their corresponding responses.
- * It is useful for debugging purposes, especially in development environments.
- *
- * It logs the request method, URI, headers (excluding sensitive information), and authentication details.
- * It also logs the response status after the request has been processed.
- */
 class RequestDebugFilter : OncePerRequestFilter() {
     private val log by logger()
     
@@ -31,11 +24,10 @@ class RequestDebugFilter : OncePerRequestFilter() {
 
         log.info("Request: $method $requestURI")
 
-        // Log request headers
         val headerNames = request.headerNames
         while (headerNames.hasMoreElements()) {
             val headerName = headerNames.nextElement()
-            if (headerName.lowercase() != "authorization") { // Don't log full auth token
+            if (headerName.lowercase() != "authorization") {
                 log.debug("Header: $headerName = ${request.getHeader(headerName)}")
             } else {
                 val authHeader = request.getHeader(headerName)
@@ -43,7 +35,6 @@ class RequestDebugFilter : OncePerRequestFilter() {
             }
         }
 
-        // Log authentication details
         val auth = SecurityContextHolder.getContext().authentication
         if (auth != null) {
             log.info("Authentication: ${auth.name}, Authorities: ${auth.authorities}")

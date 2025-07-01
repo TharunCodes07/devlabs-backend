@@ -152,21 +152,17 @@ class UserService(
         return userRepository.existsByEmail(email)
     }    fun createUserFromKeycloakSync(request: KeycloakSyncRequest): UserResponse {
         try {
-            // Check if user already exists
             val existingUser = userRepository.findById(request.id).orElse(null)
             
             val user = if (existingUser != null) {
-                // Update existing user
                 existingUser.apply {
                     name = request.name
                     email = request.email
                     role = Role.valueOf(request.role.trim().uppercase())
                     phoneNumber = request.phoneNumber.takeIf { it.isNotBlank() }
                     isActive = request.isActive
-                    // Don't update createdAt for existing users
                 }
             } else {
-                // Create new user
                 User(
                     id = request.id,
                     name = request.name,

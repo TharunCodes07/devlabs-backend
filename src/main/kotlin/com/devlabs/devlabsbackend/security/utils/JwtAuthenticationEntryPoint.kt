@@ -11,13 +11,6 @@ import org.springframework.security.oauth2.server.resource.InvalidBearerTokenExc
 import org.springframework.security.web.AuthenticationEntryPoint
 import org.springframework.stereotype.Component
 
-/**
- * This class handles authentication errors by returning a JSON response with an appropriate error message.
- * It implements the `AuthenticationEntryPoint` interface, which is used to handle authentication failures.
- *
- * The `commence` method is called when an authentication error occurs. It logs the error and sends a JSON response
- * with the error details.
- */
 @Component
 class JwtAuthenticationEntryPoint(private val objectMapper: ObjectMapper) : AuthenticationEntryPoint {
     
