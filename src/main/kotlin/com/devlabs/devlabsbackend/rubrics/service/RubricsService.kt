@@ -1,5 +1,6 @@
 package com.devlabs.devlabsbackend.rubrics.service
 
+import com.devlabs.devlabsbackend.core.config.CacheConfig
 import com.devlabs.devlabsbackend.core.exception.ForbiddenException
 import com.devlabs.devlabsbackend.core.exception.NotFoundException
 import com.devlabs.devlabsbackend.criterion.domain.Criterion
@@ -12,6 +13,8 @@ import com.devlabs.devlabsbackend.rubrics.domain.dto.RubricsResponse
 import com.devlabs.devlabsbackend.rubrics.repository.RubricsRepository
 import com.devlabs.devlabsbackend.user.domain.Role
 import com.devlabs.devlabsbackend.user.repository.UserRepository
+import org.springframework.cache.annotation.CacheEvict
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
@@ -22,7 +25,8 @@ class RubricsService(
     private val criterionRepository: CriterionRepository,
     private val userRepository: UserRepository
 ) {
-    @Transactional
+    @Transactional(readOnly = true)
+    @Cacheable(value = [CacheConfig.RUBRICS_CACHE], key = "'user:' + #userId")
     fun getRubricsByUser(userId: String): List<RubricsResponse> {
         val user = userRepository.findById(userId).orElseThrow {
             NotFoundException("User with id $userId not found")
@@ -40,7 +44,8 @@ class RubricsService(
     }
 
 
-    @Transactional
+    @Transactional(readOnly = true)
+    @Cacheable(value = [CacheConfig.RUBRICS_CACHE], key = "'id:' + #id")
     fun getRubricsById(id: UUID): RubricsResponse {
         val rubrics = rubricsRepository.findById(id).orElseThrow {
             NotFoundException("Rubrics with id $id not found")
@@ -49,6 +54,7 @@ class RubricsService(
     }
 
     @Transactional
+    @CacheEvict(value = [CacheConfig.RUBRICS_CACHE], allEntries = true)
     fun createRubrics(request: CreateRubricsRequest): RubricsResponse {
         val user = userRepository.findById(request.userId).orElseThrow {
             NotFoundException("User with id ${request.userId} not found")
@@ -85,6 +91,7 @@ class RubricsService(
     }
 
     @Transactional
+    @CacheEvict(value = [CacheConfig.RUBRICS_CACHE], allEntries = true)
     fun updateRubrics(id: UUID, request: CreateRubricsRequest): RubricsResponse {
         val user = userRepository.findById(request.userId).orElseThrow {
             NotFoundException("User with id ${request.userId} not found")
@@ -136,6 +143,7 @@ class RubricsService(
     }
 
     @Transactional
+    @CacheEvict(value = [CacheConfig.RUBRICS_CACHE], allEntries = true)
     fun deleteRubrics(id: UUID, userId: String) {
         val user = userRepository.findById(userId).orElseThrow {
             NotFoundException("User with id $userId not found")
@@ -163,7 +171,8 @@ class RubricsService(
         rubricsRepository.delete(rubrics)
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
+    @Cacheable(value = [CacheConfig.RUBRICS_CACHE], key = "'all'")
     fun getAllRubrics(): List<RubricsResponse> {
         return rubricsRepository.findAll().map { it.toRubricsResponse() }
     }

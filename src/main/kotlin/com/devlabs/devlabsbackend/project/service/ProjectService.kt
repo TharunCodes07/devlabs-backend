@@ -1,6 +1,9 @@
 package com.devlabs.devlabsbackend.project.service
 
+import com.devlabs.devlabsbackend.core.config.CacheConfig
 import com.devlabs.devlabsbackend.core.exception.NotFoundException
+import com.devlabs.devlabsbackend.core.pagination.PaginatedResponse
+import com.devlabs.devlabsbackend.core.pagination.PaginationInfo
 import com.devlabs.devlabsbackend.course.repository.CourseRepository
 import com.devlabs.devlabsbackend.project.domain.DTO.CreateProjectRequest
 import com.devlabs.devlabsbackend.project.domain.DTO.ProjectResponse
@@ -12,6 +15,8 @@ import com.devlabs.devlabsbackend.project.repository.ProjectRepository
 import com.devlabs.devlabsbackend.team.repository.TeamRepository
 import com.devlabs.devlabsbackend.user.domain.Role
 import com.devlabs.devlabsbackend.user.repository.UserRepository
+import org.springframework.cache.annotation.CacheEvict
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
@@ -31,6 +36,10 @@ class ProjectService(
     private val userRepository: UserRepository
 ) {
 
+    @CacheEvict(
+        value = [CacheConfig.PROJECT_CACHE], 
+        allEntries = true
+    )
     fun createProject(projectData: CreateProjectRequest): Project {
         try {
             val team = teamRepository.findById(projectData.teamId).orElseThrow {
@@ -65,6 +74,10 @@ class ProjectService(
         }
     }
 
+    @Cacheable(
+        value = [CacheConfig.PROJECT_CACHE], 
+        key = "'projects_team_' + #teamId + '_' + #page + '_' + #size"
+    )
     fun getProjectsByTeam(teamId: UUID, page: Int = 0, size: Int = 10): PaginatedResponse<ProjectResponse> {
         val team = teamRepository.findById(teamId).orElseThrow {
             NotFoundException("Team with id $teamId not found")
@@ -95,6 +108,7 @@ class ProjectService(
         )
     }
 
+    @Cacheable(value = [CacheConfig.PROJECT_CACHE], key = "'project_' + #projectId")
     fun getProjectById(projectId: UUID): Project {
         val project = projectRepository.findById(projectId).orElseThrow {
             NotFoundException("Project with id $projectId not found")
@@ -109,6 +123,10 @@ class ProjectService(
         return project
     }
 
+    @Cacheable(
+        value = [CacheConfig.PROJECT_CACHE], 
+        key = "'projects_course_' + #courseId + '_' + #page + '_' + #size + '_' + #sortBy + '_' + #sortOrder"
+    )
     fun getProjectsByCourse(
         courseId: UUID,
         page: Int = 0,
@@ -146,6 +164,7 @@ class ProjectService(
         )
     }
 
+    @CacheEvict(value = [CacheConfig.PROJECT_CACHE], allEntries = true)
     fun updateProject(projectId: UUID, updateData: UpdateProjectRequest, requesterId: String): Project {
         val project = getProjectById(projectId)
 
@@ -169,6 +188,7 @@ class ProjectService(
     }
 
 
+    @CacheEvict(value = [CacheConfig.PROJECT_CACHE], allEntries = true)
     fun deleteProject(projectId: UUID, userId: String): Boolean {
         val project = projectRepository.findById(projectId).orElseThrow {
             NotFoundException("Project with id $projectId not found")
@@ -188,12 +208,20 @@ class ProjectService(
         return true
     }
 
+    @Cacheable(
+        value = [CacheConfig.PROJECT_CACHE], 
+        key = "'projects_active_all'"
+    )
     @Transactional
     fun getAllActiveProjects(): List<ProjectResponse> {
         return projectRepository.findByStatusIn(listOf(ProjectStatus.ONGOING, ProjectStatus.PROPOSED))
             .map { it.toProjectResponse() }
     }
 
+    @Cacheable(
+        value = [CacheConfig.PROJECT_CACHE], 
+        key = "'projects_user_course_' + #userId + '_' + #courseId + '_' + #page + '_' + #size"
+    )
     fun getProjectsForUserByCourse(
         userId: String,
         courseId: UUID,
@@ -247,6 +275,10 @@ class ProjectService(
         )
     }
 
+    @Cacheable(
+        value = [CacheConfig.PROJECT_CACHE], 
+        key = "'projects_user_' + #userId + '_' + #page + '_' + #size"
+    )
     fun getProjectsForUser(userId: String, page: Int = 0, size: Int = 10): PaginatedResponse<ProjectResponse> {
         val user = userRepository.findById(userId).orElseThrow {
             NotFoundException("User with id $userId not found")
@@ -290,6 +322,10 @@ class ProjectService(
         )
     }
 
+    @Cacheable(
+        value = [CacheConfig.PROJECT_CACHE], 
+        key = "'projects_search_' + #userId + '_' + #courseId + '_' + #query + '_' + #page + '_' + #size"
+    )
     fun searchProjectsByCourseForUser(
         userId: String,
         courseId: UUID,
@@ -363,18 +399,30 @@ class ProjectService(
         )
     }
 
+    @Cacheable(
+        value = [CacheConfig.PROJECT_CACHE], 
+        key = "'projects_active_semester_' + #semesterId"
+    )
     @Transactional
     fun getActiveProjectsBySemester(semesterId: UUID): List<ProjectResponse> {
         return projectRepository.findActiveProjectsBySemester(semesterId)
             .map { it.toProjectResponse() }
     }
 
+    @Cacheable(
+        value = [CacheConfig.PROJECT_CACHE], 
+        key = "'projects_active_batch_' + #batchId"
+    )
     @Transactional
     fun getActiveProjectsByBatch(batchId: UUID): List<ProjectResponse> {
         return projectRepository.findActiveProjectsByBatch(batchId)
             .map { it.toProjectResponse() }
     }
 
+    @Cacheable(
+        value = [CacheConfig.PROJECT_CACHE], 
+        key = "'projects_active_faculty_' + #facultyId"
+    )
     fun getActiveProjectsByFaculty(facultyId: String): List<ProjectResponse> {
         val faculty =
             userRepository.findById(facultyId).orElseThrow { NotFoundException("Faculty with id $facultyId not found") }
@@ -382,6 +430,7 @@ class ProjectService(
         return projects.map { it.toProjectResponse() }
     }
 
+    @CacheEvict(value = [CacheConfig.PROJECT_CACHE], allEntries = true)
     @Transactional
     fun approveProject(projectId: UUID, userId: String) {
         val user = userRepository.findById(userId).orElseThrow {
@@ -401,6 +450,7 @@ class ProjectService(
         projectRepository.save(project)
     }
 
+    @CacheEvict(value = [CacheConfig.PROJECT_CACHE], allEntries = true)
     @Transactional
     fun rejectProject(projectId: UUID, userId: String) {
         val user = userRepository.findById(userId).orElseThrow {
@@ -420,6 +470,7 @@ class ProjectService(
         projectRepository.save(project)
     }
 
+    @CacheEvict(value = [CacheConfig.PROJECT_CACHE], allEntries = true)
     @Transactional
     fun reProposeProject(projectId: UUID, userId: String) {
         val user = userRepository.findById(userId).orElseThrow {
@@ -436,6 +487,7 @@ class ProjectService(
         projectRepository.save(project)
     }
 
+    @CacheEvict(value = [CacheConfig.PROJECT_CACHE], allEntries = true)
     @Transactional
     fun completeProject(projectId: UUID, userId: String) {
         val user = userRepository.findById(userId).orElseThrow {
@@ -452,6 +504,7 @@ class ProjectService(
         projectRepository.save(project)
     }
 
+    @CacheEvict(value = [CacheConfig.PROJECT_CACHE], allEntries = true)
     @Transactional
     fun revertProjectCompletion(projectId: UUID, userId: String) {
         val user = userRepository.findById(userId).orElseThrow {
@@ -467,9 +520,9 @@ class ProjectService(
         project.updatedAt = Timestamp.from(Instant.now())
         projectRepository.save(project)
     }
-}
 
     private fun createSort(sortBy: String, sortOrder: String): Sort {
         val direction = if (sortOrder.lowercase() == "desc") Sort.Direction.DESC else Sort.Direction.ASC
         return Sort.by(direction, sortBy)
     }
+}

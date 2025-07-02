@@ -77,7 +77,6 @@ class RedisConfig {
     }
 
     @Bean
-    @Primary
     fun redisTemplate(): RedisTemplate<String, Any> {
         val template = RedisTemplate<String, Any>()
         template.connectionFactory = redisConnectionFactory()
@@ -97,34 +96,6 @@ class RedisConfig {
 
         template.afterPropertiesSet()
         return template
-    }
-
-    @Bean
-    @Primary
-    fun cacheManager(): CacheManager {
-        val objectMapper = ObjectMapper().apply {
-            registerKotlinModule()
-            setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY)
-            enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL)
-        }
-
-        val redisCacheConfiguration = RedisCacheConfiguration
-            .defaultCacheConfig()
-            .entryTtl(Duration.ofMillis(cacheTimeToLive))
-            .computePrefixWith { cacheName -> "$cacheKeyPrefix$cacheName:" }
-            .serializeKeysWith(
-                org.springframework.data.redis.serializer.RedisSerializationContext.SerializationPair
-                    .fromSerializer(StringRedisSerializer())
-            )
-            .serializeValuesWith(
-                org.springframework.data.redis.serializer.RedisSerializationContext.SerializationPair
-                    .fromSerializer(GenericJackson2JsonRedisSerializer(objectMapper))
-            )
-
-        return RedisCacheManager
-            .builder(redisConnectionFactory())
-            .cacheDefaults(redisCacheConfiguration)
-            .build()
     }
 
     private fun parseTimeout(timeout: String): Long {

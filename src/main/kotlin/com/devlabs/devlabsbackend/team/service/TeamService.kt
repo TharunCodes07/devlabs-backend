@@ -2,6 +2,8 @@ package com.devlabs.devlabsbackend.team.service
 
 import com.devlabs.devlabsbackend.core.config.CacheConfig
 import com.devlabs.devlabsbackend.core.exception.NotFoundException
+import com.devlabs.devlabsbackend.core.pagination.PaginatedResponse
+import com.devlabs.devlabsbackend.core.pagination.PaginationInfo
 import com.devlabs.devlabsbackend.team.domain.DTO.CreateTeamRequest
 import com.devlabs.devlabsbackend.team.domain.DTO.TeamResponse
 import com.devlabs.devlabsbackend.team.domain.DTO.UpdateTeamRequest
@@ -12,7 +14,6 @@ import com.devlabs.devlabsbackend.user.repository.UserRepository
 import com.devlabs.devlabsbackend.user.service.toUserResponse
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.cache.annotation.Cacheable
-import org.springframework.cache.annotation.Caching
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
@@ -20,19 +21,6 @@ import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
-
-
-data class PaginatedResponse<T>(
-    val data: List<T>,
-    val pagination: PaginationInfo
-)
-
-data class PaginationInfo(
-    val current_page: Int,
-    val per_page: Int,
-    val total_pages: Int,
-    val total_count: Int
-)
 
 @Service
 @Transactional
@@ -96,8 +84,8 @@ class TeamService(
     }    
     
     @Cacheable(
-        value = [CacheConfig.TEAM_CACHE], 
-        key = "'teams_user_' + #userId + '_' + #page + '_' + #size + '_' + #sortBy + '_' + #sortOrder"
+          value = [CacheConfig.TEAM_CACHE],
+          key = "'teams_user_' + #userId + '_' + #page + '_' + #size + '_' + #sortBy + '_' + #sortOrder"
     )
     fun getTeamsByUser(userId: String, page: Int = 0, size: Int = 10, sortBy: String = "name", sortOrder: String = "asc"): PaginatedResponse<TeamResponse> {
         val user = userRepository.findById(userId).orElseThrow {
