@@ -76,28 +76,6 @@ class RedisConfig {
         return LettuceConnectionFactory(config, clientConfig)
     }
 
-    @Bean
-    fun redisTemplate(): RedisTemplate<String, Any> {
-        val template = RedisTemplate<String, Any>()
-        template.connectionFactory = redisConnectionFactory()
-
-        val objectMapper = ObjectMapper().apply {
-            registerKotlinModule()
-            setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY)
-            enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL)
-        }
-
-        template.keySerializer = StringRedisSerializer()
-        template.hashKeySerializer = StringRedisSerializer()
-
-        val jackson2JsonRedisSerializer = GenericJackson2JsonRedisSerializer(objectMapper)
-        template.valueSerializer = jackson2JsonRedisSerializer
-        template.hashValueSerializer = jackson2JsonRedisSerializer
-
-        template.afterPropertiesSet()
-        return template
-    }
-
     private fun parseTimeout(timeout: String): Long {
         return when {
             timeout.endsWith("ms") -> timeout.removeSuffix("ms").toLong()

@@ -11,8 +11,13 @@ import java.util.*
 @RepositoryRestResource(path = "kanban-boards")
 interface KanbanBoardRepository : JpaRepository<KanbanBoard, UUID> {
     
-    fun findByProject(project: Project): KanbanBoard?
-    
-    @Query("SELECT kb FROM KanbanBoard kb WHERE kb.project.id = :projectId")
-    fun findByProjectId(@Param("projectId") projectId: UUID): KanbanBoard?
+    @Query("""
+        SELECT DISTINCT b FROM KanbanBoard b 
+        LEFT JOIN FETCH b.columns c 
+        LEFT JOIN FETCH c.tasks t 
+        LEFT JOIN FETCH t.createdBy u 
+        WHERE b.project = :project 
+        ORDER BY c.position ASC, t.position ASC
+    """)
+    fun findByProjectWithAllRelations(@Param("project") project: Project): KanbanBoard?
 }

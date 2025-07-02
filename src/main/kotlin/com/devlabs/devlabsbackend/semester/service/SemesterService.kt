@@ -1,7 +1,6 @@
 package com.devlabs.devlabsbackend.semester.service
 
 import com.devlabs.devlabsbackend.batch.repository.BatchRepository
-import com.devlabs.devlabsbackend.core.config.CacheConfig
 import com.devlabs.devlabsbackend.core.exception.NotFoundException
 import com.devlabs.devlabsbackend.core.pagination.PaginatedResponse
 import com.devlabs.devlabsbackend.core.pagination.PaginationInfo
@@ -14,9 +13,6 @@ import com.devlabs.devlabsbackend.semester.domain.DTO.UpdateSemesterDTO
 import com.devlabs.devlabsbackend.semester.domain.Semester
 import com.devlabs.devlabsbackend.semester.repository.SemesterRepository
 import com.devlabs.devlabsbackend.user.domain.Role
-import org.springframework.cache.annotation.CacheEvict
-import org.springframework.cache.annotation.Cacheable
-import org.springframework.cache.annotation.Caching
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -33,10 +29,10 @@ class SemesterService
     private val batchRepository: BatchRepository,
     private val userRepository: com.devlabs.devlabsbackend.user.repository.UserRepository
 ){
-    @Cacheable(
-        value = [CacheConfig.SEMESTER_CACHE], 
-        key = "'semesters_all_' + #page + '_' + #size + '_' + #sortBy + '_' + #sortOrder"
-    )
+//     @Cacheable(
+//        value = [CacheConfig.SEMESTER_CACHE],
+//        key = "'semesters_all_' + #page + '_' + #size + '_' + #sortBy + '_' + #sortOrder"
+//    )
     fun getAllSemestersPaginated(page: Int, size: Int, sortBy: String = "name", sortOrder: String = "asc"): PaginatedResponse<SemesterResponse> {
         val sort = createSort(sortBy, sortOrder)
         val pageable = PageRequest.of(page, size, sort)
@@ -52,10 +48,10 @@ class SemesterService
             ))
     }
 
-    @Cacheable(
-        value = [CacheConfig.SEMESTER_CACHE], 
-        key = "'semesters_search_' + #query + '_' + #page + '_' + #size + '_' + #sortBy + '_' + #sortOrder"
-    )
+//     @Cacheable(
+//        value = [CacheConfig.SEMESTER_CACHE],
+//        key = "'semesters_search_' + #query + '_' + #page + '_' + #size + '_' + #sortBy + '_' + #sortOrder"
+//    )
     fun searchSemesterPaginated(query: String, page: Int, size: Int, sortBy: String = "name", sortOrder: String = "asc"): PaginatedResponse<SemesterResponse> {
         val sort = createSort(sortBy, sortOrder)
         val pageable = PageRequest.of(page, size, sort)
@@ -72,10 +68,10 @@ class SemesterService
         )
     }
 
-    @CacheEvict(
-        value = [CacheConfig.SEMESTER_CACHE], 
-        allEntries = true
-    )
+//     @CacheEvict(
+//        value = [CacheConfig.SEMESTER_CACHE],
+//        allEntries = true
+//    )
     fun createSemester(request: CreateSemesterRequest): SemesterResponse {
         val semester = Semester(
             name = request.name,
@@ -87,19 +83,19 @@ class SemesterService
     }
 
 
-    @Cacheable(
-        value = [CacheConfig.SEMESTER_CACHE], 
-        key = "'semesters_active'"
-    )
+//     @Cacheable(
+//        value = [CacheConfig.SEMESTER_CACHE],
+//        key = "'semesters_active'"
+//    )
     fun getAllActiveSemesters(): List<SemesterResponse> {
         return semesterRepository.findByIsActiveTrue().map { it.toSemesterResponse() }
     }
 
 
-    @Cacheable(
-        value = [CacheConfig.SEMESTER_CACHE], 
-        key = "'faculty_semesters_' + #facultyId"
-    )
+//     @Cacheable(
+//        value = [CacheConfig.SEMESTER_CACHE],
+//        key = "'faculty_semesters_' + #facultyId"
+//    )
     fun getFacultyAssignedSemesters(facultyId: String): List<SemesterResponse> {
         val user = userRepository.findById(facultyId).orElseThrow {
             NotFoundException("User with id $facultyId not found")
@@ -126,14 +122,14 @@ class SemesterService
         }
     }
 
-    @Cacheable(value = [CacheConfig.SEMESTER_CACHE], key = "'semester_' + #semesterId")
+//     @Cacheable(value = [CacheConfig.SEMESTER_CACHE], key = "'semester_' + #semesterId")
     fun getSemesterById(semesterId: UUID): SemesterResponse {
         val semester = semesterRepository.findById(semesterId)
             .orElseThrow { NotFoundException("Semester not found with id: $semesterId") }
         return semester.toSemesterResponse()
     }
 
-    @CacheEvict(value = [CacheConfig.SEMESTER_CACHE], allEntries = true)
+//     @CacheEvict(value = [CacheConfig.SEMESTER_CACHE], allEntries = true)
     fun updateSemester(semesterId: UUID, request: UpdateSemesterDTO): SemesterResponse {
         val semester = semesterRepository.findById(semesterId)
             .orElseThrow { NotFoundException("Semester not found with id: $semesterId") }
@@ -146,7 +142,7 @@ class SemesterService
         return updatedSemester.toSemesterResponse()
     }
 
-    @CacheEvict(value = [CacheConfig.SEMESTER_CACHE], allEntries = true)
+//     @CacheEvict(value = [CacheConfig.SEMESTER_CACHE], allEntries = true)
     fun deleteSemester(semesterId: UUID) {
         val semester = semesterRepository.findById(semesterId)
             .orElseThrow { NotFoundException("Semester not found with id: $semesterId") }
@@ -171,12 +167,12 @@ class SemesterService
         return Sort.by(direction, sortBy)
     }
 
-    @Caching(
-        evict = [
-            CacheEvict(value = [CacheConfig.SEMESTER_CACHE], allEntries = true),
-            CacheEvict(value = [CacheConfig.COURSE_CACHE], allEntries = true)
-        ]
-    )
+    // @Caching(
+    //     evict = [
+    //         CacheEvict(value = [CacheConfig.SEMESTER_CACHE], allEntries = true),
+    //         CacheEvict(value = [CacheConfig.COURSE_CACHE], allEntries = true)
+    //     ]
+    // )
     fun createCourseForSemester(semesterId: UUID, courseRequest: CreateCourseRequest): CourseResponse {
         val semester = semesterRepository.findById(semesterId).orElseThrow {
             NotFoundException("Semester with id $semesterId not found")
@@ -197,12 +193,12 @@ class SemesterService
         )
     }
 
-    @Caching(
-        evict = [
-            CacheEvict(value = [CacheConfig.SEMESTER_CACHE], allEntries = true),
-            CacheEvict(value = [CacheConfig.COURSE_CACHE], allEntries = true)
-        ]
-    )
+    // @Caching(
+    //     evict = [
+    //         CacheEvict(value = [CacheConfig.SEMESTER_CACHE], allEntries = true),
+    //         CacheEvict(value = [CacheConfig.COURSE_CACHE], allEntries = true)
+    //     ]
+    // )
     fun deleteCourseFromSemester(semesterId: UUID, courseId: UUID): CourseResponse {
         val semester = semesterRepository.findById(semesterId).orElseThrow {
             NotFoundException("Semester with id $semesterId not found")
@@ -227,7 +223,7 @@ class SemesterService
         return courseResponse
     }
 
-    @Cacheable(value = [CacheConfig.SEMESTER_CACHE], key = "'semester_courses_' + #semesterId")
+//     @Cacheable(value = [CacheConfig.SEMESTER_CACHE], key = "'semester_courses_' + #semesterId")
     @Transactional(readOnly = true)
     fun getCoursesBySemesterId(semesterId: UUID): List<CourseResponse> {
         val semester = semesterRepository.findById(semesterId).orElseThrow {

@@ -25,29 +25,27 @@ class KanbanService(
     private val userRepository: UserRepository
 ) {
 
+//     @Cacheable(value = [CacheConfig.KANBAN_CACHE], key = "'board_response_project_' + #projectId")
     fun getOrCreateBoardForProject(projectId: UUID): KanbanBoardResponse {
         val project = projectRepository.findById(projectId).orElseThrow {
             NotFoundException("Project with id $projectId not found")
         }
-
         project.team.members.size
         
-        val board = kanbanBoardRepository.findByProject(project) ?: run {
+        val board = kanbanBoardRepository.findByProjectWithAllRelations(project) ?: run {
             val newBoard = KanbanBoard(project = project)
             newBoard.initializeDefaultColumns()
             kanbanBoardRepository.save(newBoard)
+            kanbanBoardRepository.findByProjectWithAllRelations(project)!!
         }
 
-        board.columns.forEach { column ->
-            column.tasks.size
-            column.tasks.forEach { task ->
-                task.createdBy.name
-            }
-        }
-        
         return board.toBoardResponse()
     }
 
+    // @CacheEvict(
+    //     value = [CacheConfig.KANBAN_CACHE], 
+    //     allEntries = true
+    // )
     fun createTask(request: CreateTaskRequest, userId: String): KanbanTaskResponse {
         val column = kanbanColumnRepository.findById(request.columnId).orElseThrow {
             NotFoundException("Column with id ${request.columnId} not found")
@@ -77,6 +75,10 @@ class KanbanService(
         return savedTask.toTaskResponse()
     }
 
+    // @CacheEvict(
+    //     value = [CacheConfig.KANBAN_CACHE], 
+    //     allEntries = true
+    // )
     fun updateTask(taskId: UUID, request: UpdateTaskRequest, userId: String): KanbanTaskResponse {
         val task = kanbanTaskRepository.findById(taskId).orElseThrow {
             NotFoundException("Task with id $taskId not found")
@@ -102,6 +104,10 @@ class KanbanService(
         return savedTask.toTaskResponse()
     }
 
+    // @CacheEvict(
+    //     value = [CacheConfig.KANBAN_CACHE], 
+    //     allEntries = true
+    // )
     fun moveTask(taskId: UUID, request: MoveTaskRequest, userId: String): KanbanTaskResponse {
         val task = kanbanTaskRepository.findById(taskId).orElseThrow {
             NotFoundException("Task with id $taskId not found")
@@ -130,6 +136,10 @@ class KanbanService(
         return savedTask.toTaskResponse()
     }
 
+    // @CacheEvict(
+    //     value = [CacheConfig.KANBAN_CACHE], 
+    //     allEntries = true
+    // )
     fun deleteTask(taskId: UUID) {
         val task = kanbanTaskRepository.findById(taskId).orElseThrow {
             NotFoundException("Task with id $taskId not found")
@@ -139,6 +149,7 @@ class KanbanService(
     }
 
 
+    // @Cacheable(value = [CacheConfig.KANBAN_CACHE], key = "'task_' + #taskId")
     fun getTaskById(taskId: UUID): KanbanTaskResponse {
         val task = kanbanTaskRepository.findById(taskId).orElseThrow {
             NotFoundException("Task with id $taskId not found")
