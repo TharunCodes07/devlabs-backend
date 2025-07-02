@@ -41,10 +41,7 @@ class CourseService(
 
     @Transactional
     fun addBatchesToCourse(courseId: UUID, batchId: List<UUID>){
-        val course = courseRepository.findById(courseId).orElseThrow {
-            NotFoundException("Could not find course with id $courseId")
-        }
-        course.batches.size
+        val course = courseRepository.findByIdWithBatches(courseId) ?: throw NotFoundException("Could not find course with id $courseId")
         val batches = batchRepository.findAllById(batchId)
         course.batches.addAll(batches)
         courseRepository.save(course)
@@ -52,10 +49,7 @@ class CourseService(
 
     @Transactional
     fun removeBatchesFromCourse(courseId: UUID, batchId: List<UUID>){
-        val course = courseRepository.findById(courseId).orElseThrow{
-            NotFoundException("Could not find course with id $courseId")
-        }
-        course.batches.size
+        val course = courseRepository.findByIdWithBatches(courseId) ?: throw NotFoundException("Could not find course with id $courseId")
         val batches = batchRepository.findAllById(batchId)
         course.batches.removeAll(batches)
         courseRepository.save(course)
@@ -63,10 +57,7 @@ class CourseService(
 
     @Transactional
     fun assignStudents(courseId: UUID, studentId:List<String>){
-        val course = courseRepository.findById(courseId).orElseThrow {
-            NotFoundException("Could not find course with id $courseId")
-        }
-        course.students.size
+        val course = courseRepository.findByIdWithStudents(courseId) ?: throw NotFoundException("Could not find course with id $courseId")
         val users = userRepository.findAllById(studentId)
         course.students.addAll(users)
         courseRepository.save(course)
@@ -74,10 +65,7 @@ class CourseService(
 
     @Transactional
     fun removeStudents(courseId: UUID, studentId: List<String>){
-        val course = courseRepository.findById(courseId).orElseThrow {
-            NotFoundException("Could not find course with id $courseId")
-        }
-        course.students.size
+        val course = courseRepository.findByIdWithStudents(courseId) ?: throw NotFoundException("Could not find course with id $courseId")
         val users = userRepository.findAllById(studentId)
         course.students.removeAll(users)
         courseRepository.save(course)
@@ -87,20 +75,13 @@ class CourseService(
     fun getCourseInstructors(
         courseId: UUID
     ): List<UserResponse> {
-        val course = courseRepository.findById(courseId).orElseThrow {
-            NotFoundException("Course with id $courseId not found")
-        }
-        course.instructors.size
-
+        val course = courseRepository.findByIdWithInstructors(courseId) ?: throw NotFoundException("Course with id $courseId not found")
         return course.instructors.map { it.toUserResponse() }
     }
 
     @Transactional
     fun assignInstructors(courseId: UUID, instructorId:List<String>){
-        val course = courseRepository.findById(courseId).orElseThrow {
-            NotFoundException("Could not find course with id $courseId")
-        }
-        course.instructors.size
+        val course = courseRepository.findByIdWithInstructors(courseId) ?: throw NotFoundException("Could not find course with id $courseId")
         val users = userRepository.findAllById(instructorId)
         course.instructors.addAll(users)
         courseRepository.save(course)
@@ -108,10 +89,7 @@ class CourseService(
 
     @Transactional
     fun removeInstructors(courseId: UUID, instructorId:List<String>){
-        val course = courseRepository.findById(courseId).orElseThrow{
-            NotFoundException("Could not find course with id $courseId")
-        }
-        course.instructors.size
+        val course = courseRepository.findByIdWithInstructors(courseId) ?: throw NotFoundException("Could not find course with id $courseId")
         val users = userRepository.findAllById(instructorId)
         course.instructors.removeAll(users)
         courseRepository.save(course)
@@ -351,11 +329,7 @@ class CourseService(
         sortBy: String = "name",
         sortOrder: String = "asc"
     ): PaginatedResponse<UserResponse> {
-        val course = courseRepository.findById(courseId).orElseThrow {
-            NotFoundException("Course with id $courseId not found")
-        }
-
-        course.students.size
+        val course = courseRepository.findByIdWithStudents(courseId) ?: throw NotFoundException("Course with id $courseId not found")
 
         val studentUsers = course.students.filter { it.role == Role.STUDENT }
 
@@ -406,10 +380,7 @@ class CourseService(
         sortBy: String = "name",
         sortOrder: String = "asc"
     ): PaginatedResponse<BatchResponse> {
-        val course = courseRepository.findById(courseId).orElseThrow {
-            NotFoundException("Course with id $courseId not found")
-        }
-        course.batches.size
+        val course = courseRepository.findByIdWithBatches(courseId) ?: throw NotFoundException("Course with id $courseId not found")
 
         val direction = if (sortOrder.uppercase() == "DESC") Sort.Direction.DESC else Sort.Direction.ASC
 
@@ -460,11 +431,7 @@ class CourseService(
         sortBy: String = "name",
         sortOrder: String = "asc"
     ): PaginatedResponse<BatchResponse> {
-        val course = courseRepository.findById(courseId).orElseThrow {
-            NotFoundException("Course with id $courseId not found")
-        }
-
-        course.batches.size
+        val course = courseRepository.findByIdWithBatches(courseId) ?: throw NotFoundException("Course with id $courseId not found")
 
         val filteredBatches = course.batches.filter {
             it.name.contains(query, ignoreCase = true) ||
@@ -520,11 +487,7 @@ class CourseService(
         sortBy: String = "name",
         sortOrder: String = "asc"
     ): PaginatedResponse<UserResponse> {
-        val course = courseRepository.findById(courseId).orElseThrow {
-            NotFoundException("Course with id $courseId not found")
-        }
-
-        course.students.size
+        val course = courseRepository.findByIdWithStudents(courseId) ?: throw NotFoundException("Course with id $courseId not found")
 
         val filteredStudents = course.students.filter {
             it.name.contains(query, ignoreCase = true) ||

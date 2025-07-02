@@ -52,4 +52,16 @@ interface CourseRepository : JpaRepository<Course, UUID> {
     
     @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END FROM Course c WHERE c.semester = :semester")
     fun existsBySemester(@Param("semester") semester: com.devlabs.devlabsbackend.semester.domain.Semester): Boolean
+
+    @Query("SELECT c FROM Course c LEFT JOIN FETCH c.batches WHERE c.id = :courseId")
+    fun findByIdWithBatches(@Param("courseId") courseId: UUID): Course?
+    
+    @Query("SELECT c FROM Course c LEFT JOIN FETCH c.students WHERE c.id = :courseId")
+    fun findByIdWithStudents(@Param("courseId") courseId: UUID): Course?
+    
+    @Query("SELECT c FROM Course c LEFT JOIN FETCH c.instructors WHERE c.id = :courseId")
+    fun findByIdWithInstructors(@Param("courseId") courseId: UUID): Course?
+    
+    @Query("SELECT c FROM Course c LEFT JOIN FETCH c.students LEFT JOIN FETCH c.instructors WHERE c.id = :courseId")
+    fun findByIdWithStudentsAndInstructors(@Param("courseId") courseId: UUID): Course?
 }

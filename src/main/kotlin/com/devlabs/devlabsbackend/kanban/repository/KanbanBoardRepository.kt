@@ -19,5 +19,5 @@ interface KanbanBoardRepository : JpaRepository<KanbanBoard, UUID> {
         WHERE b.project = :project 
         ORDER BY c.position ASC, t.position ASC
     """)
-    fun findByProjectWithAllRelations(@Param("project") project: Project): KanbanBoard?
+    fun findByProjectWithRelations(@Param("project") project: Project): KanbanBoard?
 }

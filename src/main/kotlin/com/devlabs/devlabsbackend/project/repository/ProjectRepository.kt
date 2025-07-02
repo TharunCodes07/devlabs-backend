@@ -116,4 +116,73 @@ interface ProjectRepository : JpaRepository<Project, UUID> {
     fun findActiveProjectsByFaculty(
         @Param("facultyId") facultyId: String
     ): List<Project>
+
+    @Query("""
+        SELECT DISTINCT p FROM Project p 
+        LEFT JOIN FETCH p.team t
+        LEFT JOIN FETCH t.members
+        LEFT JOIN FETCH p.courses c
+        LEFT JOIN FETCH c.students
+        LEFT JOIN FETCH c.instructors
+        LEFT JOIN FETCH p.reviews
+        WHERE p.id = :projectId
+    """)
+    fun findByIdWithRelations(@Param("projectId") projectId: UUID): Project?
+    
+    @Query("""
+        SELECT DISTINCT p FROM Project p 
+        LEFT JOIN FETCH p.team t
+        LEFT JOIN FETCH t.members
+        LEFT JOIN FETCH p.courses c
+        LEFT JOIN FETCH c.students
+        LEFT JOIN FETCH c.instructors
+        LEFT JOIN FETCH p.reviews
+        WHERE p IN (SELECT proj FROM Project proj JOIN proj.courses course WHERE course = :course)
+    """)
+    fun findByCourseWithRelations(@Param("course") course: Course, pageable: Pageable): Page<Project>
+
+    @Query("""
+        SELECT DISTINCT p FROM Project p 
+        LEFT JOIN FETCH p.team t
+        LEFT JOIN FETCH t.members
+        WHERE p.id = :projectId
+    """)
+    fun findByIdWithTeamAndMembers(@Param("projectId") projectId: UUID): Project?
+
+    @Query("""
+        SELECT DISTINCT p FROM Project p 
+        LEFT JOIN FETCH p.team t
+        LEFT JOIN FETCH t.members
+        LEFT JOIN FETCH p.courses c
+        LEFT JOIN FETCH c.students
+        LEFT JOIN FETCH c.instructors
+        LEFT JOIN FETCH p.reviews
+        WHERE p.team = :team
+    """)
+    fun findByTeamWithRelations(@Param("team") team: Team, pageable: Pageable): Page<Project>
+
+    @Query("""
+        SELECT DISTINCT p FROM Project p 
+        LEFT JOIN FETCH p.team t
+        LEFT JOIN FETCH t.members tm
+        LEFT JOIN FETCH p.courses c
+        LEFT JOIN FETCH c.students
+        LEFT JOIN FETCH c.instructors
+        LEFT JOIN FETCH p.reviews
+        WHERE t IN (SELECT team FROM Team team JOIN team.members member WHERE member = :user)
+        AND :course MEMBER OF p.courses
+    """)
+    fun findProjectsByUserAndCourseWithRelations(@Param("user") user: com.devlabs.devlabsbackend.user.domain.User, @Param("course") course: Course): List<Project>
+
+    @Query("""
+        SELECT DISTINCT p FROM Project p 
+        LEFT JOIN FETCH p.team t
+        LEFT JOIN FETCH t.members
+        LEFT JOIN FETCH p.courses c
+        LEFT JOIN FETCH c.students
+        LEFT JOIN FETCH c.instructors
+        LEFT JOIN FETCH p.reviews
+        WHERE t IN (SELECT team FROM Team team JOIN team.members member WHERE member = :user)
+    """)
+    fun findProjectsByUserWithRelations(@Param("user") user: com.devlabs.devlabsbackend.user.domain.User): List<Project>
 }

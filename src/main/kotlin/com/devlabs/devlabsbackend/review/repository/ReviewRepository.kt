@@ -51,4 +51,15 @@ interface ReviewRepository: JpaRepository<Review, UUID> {
            "LEFT JOIN FETCH t.members " +
            "LEFT JOIN FETCH c.instructors")
     fun findAllWithAssociations(): List<Review>
+    
+    @Query("""
+        SELECT DISTINCT r FROM Review r 
+        LEFT JOIN FETCH r.rubrics rb
+        LEFT JOIN FETCH rb.criteria
+        LEFT JOIN FETCH r.courses c
+        LEFT JOIN FETCH r.projects p
+        LEFT JOIN FETCH r.batches b
+        WHERE r.id = :reviewId
+    """)
+    fun findByIdWithRelations(@Param("reviewId") reviewId: UUID): Review?
 }

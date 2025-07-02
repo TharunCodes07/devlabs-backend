@@ -108,22 +108,13 @@ class TeamService(
 
 //     @Cacheable(value = [CacheConfig.TEAM_CACHE], key = "'team_' + #teamId")
     fun getTeamById(teamId: UUID): Team {
-        val team = teamRepository.findById(teamId).orElseThrow {
-            NotFoundException("Team with id $teamId not found")
-        }
-        team.members.size
-        team.projects.size
-
+        val team = teamRepository.findByIdWithMembersAndProjects(teamId) ?: throw NotFoundException("Team with id $teamId not found")
         return team
     }
 
 //     @CacheEvict(value = [CacheConfig.TEAM_CACHE], allEntries = true)
     fun updateTeam(teamId: UUID, updateData: UpdateTeamRequest): Team {
-        val team = teamRepository.findById(teamId).orElseThrow {
-            NotFoundException("Team with id $teamId not found")
-        }
-        team.members.size
-        team.projects.size
+        val team = teamRepository.findByIdWithMembersAndProjects(teamId) ?: throw NotFoundException("Team with id $teamId not found")
 
         updateData.name?.let { team.name = it }
         updateData.description?.let { team.description = it }

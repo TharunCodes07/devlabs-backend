@@ -15,4 +15,16 @@ interface KanbanTaskRepository : JpaRepository<KanbanTask, UUID> {
     
     @Query("SELECT MAX(t.position) FROM KanbanTask t WHERE t.column = :column")
     fun findMaxPositionInColumn(@Param("column") column: KanbanColumn): Int?
+    
+    @Query("""
+        SELECT DISTINCT t FROM KanbanTask t 
+        LEFT JOIN FETCH t.createdBy cb
+        LEFT JOIN FETCH t.column c
+        LEFT JOIN FETCH c.board b
+        LEFT JOIN FETCH b.project p
+        LEFT JOIN FETCH p.team team
+        LEFT JOIN FETCH team.members
+        WHERE t.id = :taskId
+    """)
+    fun findByIdWithRelations(@Param("taskId") taskId: UUID): KanbanTask?
 }

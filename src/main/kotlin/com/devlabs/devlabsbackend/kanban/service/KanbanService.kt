@@ -27,16 +27,13 @@ class KanbanService(
 
 //     @Cacheable(value = [CacheConfig.KANBAN_CACHE], key = "'board_response_project_' + #projectId")
     fun getOrCreateBoardForProject(projectId: UUID): KanbanBoardResponse {
-        val project = projectRepository.findById(projectId).orElseThrow {
-            NotFoundException("Project with id $projectId not found")
-        }
-        project.team.members.size
+        val project = projectRepository.findByIdWithTeamAndMembers(projectId) ?: throw NotFoundException("Project with id $projectId not found")
         
-        val board = kanbanBoardRepository.findByProjectWithAllRelations(project) ?: run {
+        val board = kanbanBoardRepository.findByProjectWithRelations(project) ?: run {
             val newBoard = KanbanBoard(project = project)
             newBoard.initializeDefaultColumns()
             kanbanBoardRepository.save(newBoard)
-            kanbanBoardRepository.findByProjectWithAllRelations(project)!!
+            kanbanBoardRepository.findByProjectWithRelations(project)!!
         }
 
         return board.toBoardResponse()
@@ -80,12 +77,7 @@ class KanbanService(
     //     allEntries = true
     // )
     fun updateTask(taskId: UUID, request: UpdateTaskRequest, userId: String): KanbanTaskResponse {
-        val task = kanbanTaskRepository.findById(taskId).orElseThrow {
-            NotFoundException("Task with id $taskId not found")
-        }
-
-        task.createdBy.name
-        task.column.board.project.team.members.size
+        val task = kanbanTaskRepository.findByIdWithRelations(taskId) ?: throw NotFoundException("Task with id $taskId not found")
         
         val requester = userRepository.findById(userId).orElseThrow {
             NotFoundException("User with id $userId not found")
@@ -109,16 +101,11 @@ class KanbanService(
     //     allEntries = true
     // )
     fun moveTask(taskId: UUID, request: MoveTaskRequest, userId: String): KanbanTaskResponse {
-        val task = kanbanTaskRepository.findById(taskId).orElseThrow {
-            NotFoundException("Task with id $taskId not found")
-        }
+        val task = kanbanTaskRepository.findByIdWithRelations(taskId) ?: throw NotFoundException("Task with id $taskId not found")
         
         val newColumn = kanbanColumnRepository.findById(request.columnId).orElseThrow {
             NotFoundException("Column with id ${request.columnId} not found")
         }
-
-        task.createdBy.name
-        task.column.board.project.team.members.size
         
         val requester = userRepository.findById(userId).orElseThrow {
             NotFoundException("User with id $userId not found")

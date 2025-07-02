@@ -82,9 +82,7 @@ class IndividualScoreService(
             NotFoundException("Review with id $reviewId not found")
         }
 
-        val project = projectRepository.findById(projectId).orElseThrow {
-            NotFoundException("Project with id $projectId not found")
-        }
+        val project = projectRepository.findByIdWithRelations(projectId) ?: throw NotFoundException("Project with id $projectId not found")
 
         val course = courseRepository.findById(courseId).orElseThrow {
             NotFoundException("Course with id $courseId not found")
@@ -161,9 +159,7 @@ class IndividualScoreService(
             NotFoundException("Review with id ${request.reviewId} not found")
         }
 
-        val project = projectRepository.findById(request.projectId).orElseThrow {
-            NotFoundException("Project with id ${request.projectId} not found")
-        }
+        val project = projectRepository.findByIdWithRelations(request.projectId) ?: throw NotFoundException("Project with id ${request.projectId} not found")
         val course = courseRepository.findById(request.courseId).orElseThrow {
             NotFoundException("Course with id ${request.courseId} not found")
         }
@@ -246,9 +242,7 @@ class IndividualScoreService(
         val review = reviewRepository.findById(reviewId).orElseThrow {
             NotFoundException("Review with id $reviewId not found")
         }
-        val project = projectRepository.findById(projectId).orElseThrow {
-            NotFoundException("Project with id $projectId not found")
-        }
+        val project = projectRepository.findByIdWithRelations(projectId) ?: throw NotFoundException("Project with id $projectId not found")
 
         if (!isProjectAssociatedWithReview(review, project)) {
             throw IllegalArgumentException("Project is not part of this review")
@@ -289,9 +283,6 @@ class IndividualScoreService(
     }
 
     private fun isProjectAssociatedWithReview(review: Review, project: Project): Boolean {
-        project.courses.size
-        project.team.members.size
-
         if (review.projects.any { it.id == project.id }) {
             return true
         }

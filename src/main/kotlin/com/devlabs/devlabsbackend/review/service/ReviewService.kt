@@ -49,11 +49,7 @@ class ReviewService(
             throw ForbiddenException("Only admin, manager, or faculty can create reviews")
         }
 
-        val rubrics = rubricsRepository.findById(request.rubricsId).orElseThrow {
-            NotFoundException("Rubrics with id ${request.rubricsId} not found")
-        }
-
-        rubrics.criteria.size
+        val rubrics = rubricsRepository.findByIdWithCriteria(request.rubricsId) ?: throw NotFoundException("Rubrics with id ${request.rubricsId} not found")
 
         if (user.role == Role.FACULTY && !request.courseIds.isNullOrEmpty()) {
             validateFacultyCoursesAccess(user, request.courseIds)
@@ -89,11 +85,6 @@ class ReviewService(
         }
 
         val finalReview = reviewRepository.save(savedReview)
-
-        finalReview.rubrics?.criteria?.size
-        finalReview.courses.size
-        finalReview.projects.size
-        finalReview.batches.size
 
         return finalReview
     }
@@ -638,14 +629,9 @@ class ReviewService(
         println("=== DEBUG: Starting review assignment check for project $projectId ===")
 
         val today = LocalDate.now()
-        val project = projectRepository.findById(projectId).orElseThrow {
-            NotFoundException("Project with id $projectId not found")
-        }
+        val project = projectRepository.findByIdWithRelations(projectId) ?: throw NotFoundException("Project with id $projectId not found")
 
         println("DEBUG: Found project: ${project.title}")
-
-        project.courses.size
-        project.team.members.size
 
         println("DEBUG: Project has ${project.courses.size} courses")
         project.courses.forEach { course ->
@@ -899,9 +885,6 @@ class ReviewService(
     }
 
     private fun isProjectAssociatedWithReview(review: Review, project: Project): Boolean {
-        project.courses.size
-        project.team.members.size
-
         if (review.projects.any { it.id == project.id }) {
             return true
         }

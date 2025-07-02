@@ -29,4 +29,11 @@ interface RubricsRepository: JpaRepository<Rubrics, UUID>{
     
     @Query("SELECT r FROM Rubrics r WHERE r.createdBy = :createdBy AND LOWER(r.name) LIKE LOWER(CONCAT('%', :query, '%'))")
     fun findByCreatedByAndNameContainingIgnoreCase(@Param("createdBy") createdBy: User, @Param("query") query: String, pageable: Pageable): Page<Rubrics>
+    
+    @Query("""
+        SELECT DISTINCT r FROM Rubrics r 
+        LEFT JOIN FETCH r.criteria
+        WHERE r.id = :rubricsId
+    """)
+    fun findByIdWithCriteria(@Param("rubricsId") rubricsId: UUID): Rubrics?
 }

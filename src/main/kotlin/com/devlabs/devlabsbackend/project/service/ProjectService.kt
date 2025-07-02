@@ -39,17 +39,13 @@ class ProjectService(
 //    )
     fun createProject(projectData: CreateProjectRequest): Project {
         try {
-            val team = teamRepository.findById(projectData.teamId).orElseThrow {
-                NotFoundException("Team with id ${projectData.teamId} not found")
-            }
-            team.members.size
+            val team = teamRepository.findByIdWithMembers(projectData.teamId) ?: throw NotFoundException("Team with id ${projectData.teamId} not found")
 
             val courses = if (projectData.courseIds.isNotEmpty()) {
                 courseRepository.findAllById(projectData.courseIds).also { foundCourses ->
                     if (foundCourses.size != projectData.courseIds.size) {
                         throw NotFoundException("Some courses were not found")
                     }
-                    foundCourses.forEach { it.students.size }
                 }.toMutableSet()
             } else {
                 mutableSetOf()
@@ -76,23 +72,10 @@ class ProjectService(
 //        key = "'projects_team_' + #teamId + '_' + #page + '_' + #size"
 //    )
     fun getProjectsByTeam(teamId: UUID, page: Int = 0, size: Int = 10): PaginatedResponse<ProjectResponse> {
-        val team = teamRepository.findById(teamId).orElseThrow {
-            NotFoundException("Team with id $teamId not found")
-        }
-
-        team.members.size
+        val team = teamRepository.findByIdWithMembers(teamId) ?: throw NotFoundException("Team with id $teamId not found")
 
         val pageable: Pageable = PageRequest.of(page, size)
-        val projectsPage = projectRepository.findByTeam(team, pageable)
-        projectsPage.content.forEach { project ->
-            project.courses.forEach { course ->
-                course.students.size
-                course.instructors.size
-            }
-
-            project.team.members.size
-            project.reviews.size
-        }
+        val projectsPage = projectRepository.findByTeamWithRelations(team, pageable)
 
         return PaginatedResponse(
             data = projectsPage.content.map { it.toProjectResponse() },
@@ -107,16 +90,7 @@ class ProjectService(
 
 //     @Cacheable(value = [CacheConfig.PROJECT_CACHE], key = "'project_' + #projectId")
     fun getProjectById(projectId: UUID): Project {
-        val project = projectRepository.findById(projectId).orElseThrow {
-            NotFoundException("Project with id $projectId not found")
-        }
-        project.team.members.size
-        project.courses.forEach { course ->
-            course.students.size
-            course.instructors.size
-        }
-        project.reviews.size
-
+        val project = projectRepository.findByIdWithRelations(projectId) ?: throw NotFoundException("Project with id $projectId not found")
         return project
     }
 
@@ -131,24 +105,11 @@ class ProjectService(
         sortBy: String = "title",
         sortOrder: String = "asc"
     ): PaginatedResponse<ProjectResponse> {
-        val course = courseRepository.findById(courseId).orElseThrow {
-            NotFoundException("Course with id $courseId not found")
-        }
-        course.students.size
-        course.instructors.size
+        val course = courseRepository.findByIdWithStudentsAndInstructors(courseId) ?: throw NotFoundException("Course with id $courseId not found")
 
         val sort = createSort(sortBy, sortOrder)
         val pageable: Pageable = PageRequest.of(page, size, sort)
-        val projectsPage = projectRepository.findByCourse(course, pageable)
-
-        projectsPage.content.forEach { project ->
-            project.team.members.size
-            project.courses.forEach { c ->
-                c.students.size
-                c.instructors.size
-            }
-            project.reviews.size
-        }
+        val projectsPage = projectRepository.findByCourseWithRelations(course, pageable)
 
         return PaginatedResponse(
             data = projectsPage.content.map { it.toProjectResponse() },
@@ -165,8 +126,6 @@ class ProjectService(
     fun updateProject(projectId: UUID, updateData: UpdateProjectRequest, requesterId: String): Project {
         val project = getProjectById(projectId)
 
-        project.team.members.size
-
         if (project.status !in listOf(ProjectStatus.PROPOSED, ProjectStatus.REJECTED)) {
             throw IllegalArgumentException("Project cannot be edited in current status: ${project.status}")
         }
@@ -176,10 +135,6 @@ class ProjectService(
         updateData.githubUrl?.let { project.githubUrl = it }
 
         project.updatedAt = Timestamp.from(Instant.now())
-        project.courses.forEach { course ->
-            course.students.size
-            course.instructors.size
-        }
 
         return projectRepository.save(project)
     }
@@ -187,9 +142,7 @@ class ProjectService(
 
 //     @CacheEvict(value = [CacheConfig.PROJECT_CACHE], allEntries = true)
     fun deleteProject(projectId: UUID, userId: String): Boolean {
-        val project = projectRepository.findById(projectId).orElseThrow {
-            NotFoundException("Project with id $projectId not found")
-        }
+        val project = projectRepository.findByIdWithRelations(projectId) ?: throw NotFoundException("Project with id $projectId not found")
         val user = userRepository.findById(userId).orElseThrow {
             NotFoundException("User with id $userId not found")
         }
@@ -233,22 +186,7 @@ class ProjectService(
             NotFoundException("Course with id $courseId not found")
         }
 
-        val teams = teamRepository.findByMemberList(user)
-        teams.forEach { it.members.size }
-
-        val projects = teams.flatMap { team ->
-            projectRepository.findByTeam(team)
-        }.filter { project ->
-            project.courses.contains(course)
-        }
-
-        projects.forEach { project ->
-            project.courses.forEach { courseEntity ->
-                courseEntity.students.size
-                courseEntity.instructors.size
-            }
-            project.reviews.size
-        }
+        val projects = projectRepository.findProjectsByUserAndCourseWithRelations(user, course)
 
         val total = projects.size
         val totalPages = (total + size - 1) / size
@@ -281,21 +219,7 @@ class ProjectService(
             NotFoundException("User with id $userId not found")
         }
 
-        val teams = teamRepository.findByMemberList(user)
-
-        teams.forEach { it.members.size }
-
-        val projects = teams.flatMap { team ->
-            projectRepository.findByTeam(team)
-        }
-
-        projects.forEach { project ->
-            project.courses.forEach { course ->
-                course.students.size
-                course.instructors.size
-            }
-            project.reviews.size
-        }
+        val projects = projectRepository.findProjectsByUserWithRelations(user)
 
         val total = projects.size
         val totalPages = (total + size - 1) / size
@@ -334,12 +258,7 @@ class ProjectService(
             NotFoundException("User with id $userId not found")
         }
 
-        val course = courseRepository.findById(courseId).orElseThrow {
-            NotFoundException("Course with id $courseId not found")
-        }
-
-        course.students.size
-        course.instructors.size
+        val course = courseRepository.findByIdWithStudentsAndInstructors(courseId) ?: throw NotFoundException("Course with id $courseId not found")
 
         val hasAccess = when (user.role) {
             Role.ADMIN, Role.MANAGER -> true
@@ -375,14 +294,6 @@ class ProjectService(
             else -> {
                 Page.empty(pageable)
             }
-        }
-        projectsPage.content.forEach { project ->
-            project.team.members.size
-            project.courses.forEach { c ->
-                c.students.size
-                c.instructors.size
-            }
-            project.reviews.size
         }
 
         return PaginatedResponse(

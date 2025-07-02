@@ -30,25 +30,15 @@ class DepartmentService(
         val sort = createSort(sortBy, sortOrder)
         val pageable: Pageable = PageRequest.of(page, size, sort)
 
-        val departmentIdsPage = departmentRepository.findAllDepartmentIds(pageable)
-
-        val departmentIds = departmentIdsPage.content
-        val departments = if (departmentIds.isNotEmpty()) {
-            departmentRepository.findAllById(departmentIds).map { department ->
-                department.batches.size
-                department
-            }
-        } else {
-            emptyList()
-        }
+        val departmentsPage = departmentRepository.findAllWithBatches(pageable)
         
         return PaginatedResponse(
-            data = departments.map { it.toDepartmentResponse() },
+            data = departmentsPage.content.map { it.toDepartmentResponse() },
             pagination = PaginationInfo(
                 current_page = page,
                 per_page = size,
-                total_pages = departmentIdsPage.totalPages,
-                total_count = departmentIdsPage.totalElements.toInt()
+                total_pages = departmentsPage.totalPages,
+                total_count = departmentsPage.totalElements.toInt()
             )
         )
     }
@@ -62,25 +52,15 @@ class DepartmentService(
     ): PaginatedResponse<DepartmentResponse> {
         val sort = createSort(sortBy, sortOrder)
         val pageable: Pageable = PageRequest.of(page, size, sort)
-        val departmentIdsPage = departmentRepository.findDepartmentIdsByNameContainingIgnoreCase(query, pageable)
-
-        val departmentIds = departmentIdsPage.content
-        val departments = if (departmentIds.isNotEmpty()) {
-            departmentRepository.findAllById(departmentIds).map { department ->
-                department.batches.size
-                department
-            }
-        } else {
-            emptyList()
-        }
+        val departmentsPage = departmentRepository.findByNameContainingIgnoreCaseWithBatches(query, pageable)
         
         return PaginatedResponse(
-            data = departments.map { it.toDepartmentResponse() },
+            data = departmentsPage.content.map { it.toDepartmentResponse() },
             pagination = PaginationInfo(
                 current_page = page,
                 per_page = size,
-                total_pages = departmentIdsPage.totalPages,
-                total_count = departmentIdsPage.totalElements.toInt()
+                total_pages = departmentsPage.totalPages,
+                total_count = departmentsPage.totalElements.toInt()
             )
         )
     }
@@ -102,7 +82,6 @@ class DepartmentService(
     fun createDepartment(request: CreateDepartmentRequest): Department {
         val department = Department(name = request.name)
         val savedDepartment = departmentRepository.save(department)
-        savedDepartment.batches.size
         return savedDepartment
     }fun updateDepartment(departmentId: UUID, request: UpdateDepartmentRequest): Department {
         val department = departmentRepository.findById(departmentId).orElseThrow {
@@ -113,16 +92,12 @@ class DepartmentService(
         
         val savedDepartment = departmentRepository.save(department)
 
-        savedDepartment.batches.size
         return savedDepartment
     }
 
     @Transactional(readOnly = true)
     fun getDepartmentById(departmentId: UUID): Department {
-        val department = departmentRepository.findById(departmentId).orElseThrow {
-            NotFoundException("Department with id $departmentId not found")
-        }
-        department.batches.size
+        val department = departmentRepository.findByIdWithBatches(departmentId) ?: throw NotFoundException("Department with id $departmentId not found")
         return department
     }
 

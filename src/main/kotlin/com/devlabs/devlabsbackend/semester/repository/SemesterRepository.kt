@@ -29,4 +29,7 @@ interface SemesterRepository : JpaRepository<Semester, UUID> {
 
     @Query("SELECT s FROM Semester s LEFT JOIN FETCH s.courses WHERE s.id IN :ids")
     fun findAllByIdWithCourses(@Param("ids") ids: List<UUID>): List<Semester>
+
+    @Query("SELECT s FROM Semester s LEFT JOIN FETCH s.courses WHERE s.id = :semesterId")
+    fun findByIdWithCourses(@Param("semesterId") semesterId: UUID): Semester?
 }

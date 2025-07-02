@@ -78,4 +78,12 @@ interface TeamRepository : JpaRepository<Team, UUID> {    @RestResource(exported
         @Param("instructor") instructor: User, 
         pageable: Pageable
     ): Page<Team>
+
+    @RestResource(path = "byIdWithMembers", exported = false)
+    @Query("SELECT t FROM Team t LEFT JOIN FETCH t.members WHERE t.id = :teamId")
+    fun findByIdWithMembers(@Param("teamId") teamId: UUID): Team?
+    
+    @RestResource(path = "byIdWithMembersAndProjects", exported = false)
+    @Query("SELECT t FROM Team t LEFT JOIN FETCH t.members LEFT JOIN FETCH t.projects WHERE t.id = :teamId")
+    fun findByIdWithMembersAndProjects(@Param("teamId") teamId: UUID): Team?
 }

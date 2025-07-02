@@ -226,10 +226,7 @@ class SemesterService
 //     @Cacheable(value = [CacheConfig.SEMESTER_CACHE], key = "'semester_courses_' + #semesterId")
     @Transactional(readOnly = true)
     fun getCoursesBySemesterId(semesterId: UUID): List<CourseResponse> {
-        val semester = semesterRepository.findById(semesterId).orElseThrow {
-            NotFoundException("Semester with id $semesterId not found")
-        }
-        semester.courses.size
+        val semester = semesterRepository.findByIdWithCourses(semesterId) ?: throw NotFoundException("Semester with id $semesterId not found")
 
         return semester.courses.map { course ->
             CourseResponse(
