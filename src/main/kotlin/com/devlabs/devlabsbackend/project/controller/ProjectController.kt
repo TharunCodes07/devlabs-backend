@@ -37,10 +37,12 @@ class ProjectController(
     fun getProjectsByTeam(
         @PathVariable teamId: UUID,
         @RequestParam(required = false, defaultValue = "0") page: Int,
-        @RequestParam(required = false, defaultValue = "10") size: Int
+        @RequestParam(required = false, defaultValue = "10") size: Int,
+        @RequestParam(required = false, defaultValue = "title") sortBy: String,
+        @RequestParam(required = false, defaultValue = "asc") sortOrder: String
     ): ResponseEntity<Any> {
         return try {
-            val projects = projectService.getProjectsByTeam(teamId, page, size)
+            val projects = projectService.getProjectsByTeam(teamId, page, size, sortBy, sortOrder)
             ResponseEntity.ok(projects)
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf("error" to e.message))
@@ -213,10 +215,12 @@ class ProjectController(
         @PathVariable userId: String,
         @PathVariable courseId: UUID,
         @RequestParam(required = false, defaultValue = "0") page: Int,
-        @RequestParam(required = false, defaultValue = "10") size: Int
+        @RequestParam(required = false, defaultValue = "10") size: Int,
+        @RequestParam(required = false, defaultValue = "title") sortBy: String,
+        @RequestParam(required = false, defaultValue = "asc") sortOrder: String
     ): ResponseEntity<Any> {
         return try {
-            val projects = projectService.getProjectsForUserByCourse(userId, courseId, page, size)
+            val projects = projectService.getProjectsForUserByCourse(userId, courseId, page, size, sortBy, sortOrder)
             ResponseEntity.ok(projects)
         } catch (e: NotFoundException) {
             ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -233,10 +237,12 @@ class ProjectController(
     fun getProjectsForUser(
         @PathVariable userId: String,
         @RequestParam(required = false, defaultValue = "0") page: Int,
-        @RequestParam(required = false, defaultValue = "10") size: Int
+        @RequestParam(required = false, defaultValue = "10") size: Int,
+        @RequestParam(required = false, defaultValue = "title") sortBy: String,
+        @RequestParam(required = false, defaultValue = "asc") sortOrder: String
     ): ResponseEntity<Any> {
         return try {
-            val projects = projectService.getProjectsForUser(userId, page, size)
+            val projects = projectService.getProjectsForUser(userId, page, size, sortBy, sortOrder)
             ResponseEntity.ok(projects)
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf("error" to e.message))
@@ -351,10 +357,12 @@ class ProjectController(
     fun getArchivedProjects(
         @PathVariable userId: String,
         @RequestParam(required = false, defaultValue = "0") page: Int,
-        @RequestParam(required = false, defaultValue = "10") size: Int
+        @RequestParam(required = false, defaultValue = "10") size: Int,
+        @RequestParam(required = false, defaultValue = "title") sortBy: String,
+        @RequestParam(required = false, defaultValue = "asc") sortOrder: String
     ): ResponseEntity<Any> {
         return try {
-            val projects = projectService.getArchivedProjects(userId, page, size)
+            val projects = projectService.getArchivedProjects(userId, page, size, sortBy, sortOrder)
             ResponseEntity.ok(projects)
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf("error" to e.message))
@@ -372,10 +380,12 @@ class ProjectController(
         @PathVariable userId: String,
         @RequestParam query: String,
         @RequestParam(required = false, defaultValue = "0") page: Int,
-        @RequestParam(required = false, defaultValue = "10") size: Int
+        @RequestParam(required = false, defaultValue = "10") size: Int,
+        @RequestParam(required = false, defaultValue = "title") sortBy: String,
+        @RequestParam(required = false, defaultValue = "asc") sortOrder: String
     ): ResponseEntity<Any> {
         return try {
-            val projects = projectService.searchArchivedProjects(userId, query, page, size)
+            val projects = projectService.searchArchivedProjects(userId, query, page, size, sortBy, sortOrder)
             ResponseEntity.ok(projects)
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf("error" to e.message))

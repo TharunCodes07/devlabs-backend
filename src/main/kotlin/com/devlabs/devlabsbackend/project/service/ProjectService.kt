@@ -71,10 +71,11 @@ class ProjectService(
 //        value = [CacheConfig.PROJECT_CACHE],
 //        key = "'projects_team_' + #teamId + '_' + #page + '_' + #size"
 //    )
-    fun getProjectsByTeam(teamId: UUID, page: Int = 0, size: Int = 10): PaginatedResponse<ProjectResponse> {
+    fun getProjectsByTeam(teamId: UUID, page: Int = 0, size: Int = 10, sortBy: String = "title", sortOrder: String = "asc"): PaginatedResponse<ProjectResponse> {
         val team = teamRepository.findByIdWithMembers(teamId) ?: throw NotFoundException("Team with id $teamId not found")
 
-        val pageable: Pageable = PageRequest.of(page, size)
+        val sort = createSort(sortBy, sortOrder)
+        val pageable: Pageable = PageRequest.of(page, size, sort)
         val projectsPage = projectRepository.findByTeamWithRelations(team, pageable)
 
         return PaginatedResponse(
@@ -176,7 +177,9 @@ class ProjectService(
         userId: String,
         courseId: UUID,
         page: Int = 0,
-        size: Int = 10
+        size: Int = 10,
+        sortBy: String = "title",
+        sortOrder: String = "asc"
     ): PaginatedResponse<ProjectResponse> {
         val user = userRepository.findById(userId).orElseThrow {
             NotFoundException("User with id $userId not found")
@@ -188,13 +191,22 @@ class ProjectService(
 
         val projects = projectRepository.findProjectsByUserAndCourseWithRelations(user, course)
 
-        val total = projects.size
+        val direction = if (sortOrder.lowercase() == "desc") Sort.Direction.DESC else Sort.Direction.ASC
+        val sortedProjects = when (sortBy.lowercase()) {
+            "title" -> if (direction == Sort.Direction.ASC) projects.sortedBy { it.title } else projects.sortedByDescending { it.title }
+            "status" -> if (direction == Sort.Direction.ASC) projects.sortedBy { it.status } else projects.sortedByDescending { it.status }
+            "createdat" -> if (direction == Sort.Direction.ASC) projects.sortedBy { it.createdAt } else projects.sortedByDescending { it.createdAt }
+            "updatedat" -> if (direction == Sort.Direction.ASC) projects.sortedBy { it.updatedAt } else projects.sortedByDescending { it.updatedAt }
+            else -> projects.sortedBy { it.title }
+        }
+
+        val total = sortedProjects.size
         val totalPages = (total + size - 1) / size
         val startIndex = page * size
         val endIndex = minOf(startIndex + size, total)
 
         val pagedProjects = if (startIndex < total) {
-            projects.subList(startIndex, endIndex)
+            sortedProjects.subList(startIndex, endIndex)
         } else {
             emptyList()
         }
@@ -214,20 +226,29 @@ class ProjectService(
 //        value = [CacheConfig.PROJECT_CACHE],
 //        key = "'projects_user_' + #userId + '_' + #page + '_' + #size"
 //    )
-    fun getProjectsForUser(userId: String, page: Int = 0, size: Int = 10): PaginatedResponse<ProjectResponse> {
+    fun getProjectsForUser(userId: String, page: Int = 0, size: Int = 10, sortBy: String = "title", sortOrder: String = "asc"): PaginatedResponse<ProjectResponse> {
         val user = userRepository.findById(userId).orElseThrow {
             NotFoundException("User with id $userId not found")
         }
 
         val projects = projectRepository.findProjectsByUserWithRelations(user)
 
-        val total = projects.size
+        val direction = if (sortOrder.lowercase() == "desc") Sort.Direction.DESC else Sort.Direction.ASC
+        val sortedProjects = when (sortBy.lowercase()) {
+            "title" -> if (direction == Sort.Direction.ASC) projects.sortedBy { it.title } else projects.sortedByDescending { it.title }
+            "status" -> if (direction == Sort.Direction.ASC) projects.sortedBy { it.status } else projects.sortedByDescending { it.status }
+            "createdat" -> if (direction == Sort.Direction.ASC) projects.sortedBy { it.createdAt } else projects.sortedByDescending { it.createdAt }
+            "updatedat" -> if (direction == Sort.Direction.ASC) projects.sortedBy { it.updatedAt } else projects.sortedByDescending { it.updatedAt }
+            else -> projects.sortedBy { it.title }
+        }
+
+        val total = sortedProjects.size
         val totalPages = (total + size - 1) / size
         val startIndex = page * size
         val endIndex = minOf(startIndex + size, total)
 
         val pagedProjects = if (startIndex < total) {
-            projects.subList(startIndex, endIndex)
+            sortedProjects.subList(startIndex, endIndex)
         } else {
             emptyList()
         }
@@ -430,12 +451,13 @@ class ProjectService(
     }
 
     @Transactional(readOnly = true)
-    fun getArchivedProjects(userId: String, page: Int = 0, size: Int = 10): PaginatedResponse<ProjectResponse> {
+    fun getArchivedProjects(userId: String, page: Int = 0, size: Int = 10, sortBy: String = "title", sortOrder: String = "asc"): PaginatedResponse<ProjectResponse> {
         val user = userRepository.findById(userId).orElseThrow {
             NotFoundException("User with id $userId not found")
         }
 
-        val pageable: Pageable = PageRequest.of(page, size)
+        val sort = createSort(sortBy, sortOrder)
+        val pageable: Pageable = PageRequest.of(page, size, sort)
 
         val projectsPage = when (user.role) {
             Role.ADMIN, Role.MANAGER -> {
@@ -461,12 +483,13 @@ class ProjectService(
     }
 
     @Transactional(readOnly = true)
-    fun searchArchivedProjects(userId: String, query: String, page: Int = 0, size: Int = 10): PaginatedResponse<ProjectResponse> {
+    fun searchArchivedProjects(userId: String, query: String, page: Int = 0, size: Int = 10, sortBy: String = "title", sortOrder: String = "asc"): PaginatedResponse<ProjectResponse> {
         val user = userRepository.findById(userId).orElseThrow {
             NotFoundException("User with id $userId not found")
         }
 
-        val pageable: Pageable = PageRequest.of(page, size)
+        val sort = createSort(sortBy, sortOrder)
+        val pageable: Pageable = PageRequest.of(page, size, sort)
 
         val projectsPage = when (user.role) {
             Role.ADMIN, Role.MANAGER -> {

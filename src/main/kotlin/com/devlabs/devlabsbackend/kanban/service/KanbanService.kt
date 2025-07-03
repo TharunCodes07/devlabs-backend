@@ -8,6 +8,8 @@ import com.devlabs.devlabsbackend.kanban.repository.KanbanBoardRepository
 import com.devlabs.devlabsbackend.kanban.repository.KanbanColumnRepository
 import com.devlabs.devlabsbackend.kanban.repository.KanbanTaskRepository
 import com.devlabs.devlabsbackend.project.repository.ProjectRepository
+import com.devlabs.devlabsbackend.security.utils.SecurityUtils
+import com.devlabs.devlabsbackend.user.domain.Role
 import com.devlabs.devlabsbackend.user.repository.UserRepository
 import jakarta.transaction.Transactional
 import org.springframework.stereotype.Service
@@ -51,6 +53,13 @@ class KanbanService(
         val createdBy = userRepository.findById(userId).orElseThrow {
             NotFoundException("User with id $userId not found")
         }
+
+        val isAuthorized = createdBy.role in setOf(Role.ADMIN, Role.MANAGER, Role.FACULTY) ||
+                          column.board.project.team.members.contains(createdBy)
+        
+        if (!isAuthorized) {
+            throw IllegalArgumentException("Only admin, manager, faculty, or team members can create tasks")
+        }
         
         val assignedTo = request.assignedToId?.let { assignedToId ->
             userRepository.findById(assignedToId).orElseThrow {
@@ -83,8 +92,11 @@ class KanbanService(
             NotFoundException("User with id $userId not found")
         }
 
-        if (!task.column.board.project.team.members.contains(requester)) {
-            throw IllegalArgumentException("Only team members can update tasks")
+        val isAuthorized = requester.role in setOf(Role.ADMIN, Role.MANAGER, Role.FACULTY) ||
+                          task.column.board.project.team.members.contains(requester)
+        
+        if (!isAuthorized) {
+            throw IllegalArgumentException("Only admin, manager, faculty, or team members can update tasks")
         }
         
         request.title?.let { task.title = it }
@@ -111,8 +123,11 @@ class KanbanService(
             NotFoundException("User with id $userId not found")
         }
 
-        if (!task.column.board.project.team.members.contains(requester)) {
-            throw IllegalArgumentException("Only team members can move tasks")
+        val isAuthorized = requester.role in setOf(Role.ADMIN, Role.MANAGER, Role.FACULTY) ||
+                          task.column.board.project.team.members.contains(requester)
+        
+        if (!isAuthorized) {
+            throw IllegalArgumentException("Only admin, manager, faculty, or team members can move tasks")
         }
 
         task.column = newColumn
@@ -128,8 +143,20 @@ class KanbanService(
     //     allEntries = true
     // )
     fun deleteTask(taskId: UUID) {
-        val task = kanbanTaskRepository.findById(taskId).orElseThrow {
-            NotFoundException("Task with id $taskId not found")
+        val task = kanbanTaskRepository.findByIdWithRelations(taskId) ?: throw NotFoundException("Task with id $taskId not found")
+        
+        val currentUserId = SecurityUtils.getCurrentUserId() 
+            ?: throw IllegalArgumentException("User not authenticated")
+        
+        val requester = userRepository.findById(currentUserId).orElseThrow {
+            NotFoundException("User with id $currentUserId not found")
+        }
+
+        val isAuthorized = requester.role in setOf(Role.ADMIN, Role.MANAGER, Role.FACULTY) ||
+                          task.column.board.project.team.members.contains(requester)
+        
+        if (!isAuthorized) {
+            throw IllegalArgumentException("Only admin, manager, faculty, or team members can delete tasks")
         }
         
         kanbanTaskRepository.delete(task)

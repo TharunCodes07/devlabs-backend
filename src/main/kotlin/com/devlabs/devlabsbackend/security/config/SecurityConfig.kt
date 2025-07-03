@@ -88,7 +88,7 @@ class SecurityConfig(@Autowired private val jwtAuthenticationEntryPoint: JwtAuth
 
     @Bean
     @Throws(Exception::class)
-    fun evalifyServerFilterChain(http: HttpSecurity): SecurityFilterChain {
+    fun devlabsServerFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .csrf { csrf -> csrf.disable() }
             .cors(Customizer.withDefaults())

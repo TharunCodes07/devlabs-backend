@@ -63,10 +63,11 @@ class TeamService(
 
 //     @Cacheable(
 //        value = [CacheConfig.TEAM_CACHE],
-//        key = "'teams_all_' + #page + '_' + #size"
+//        key = "'teams_all_' + #page + '_' + #size + '_' + #sortBy + '_' + #sortOrder"
 //    )
-    fun getAllTeams(page: Int = 0, size: Int = 10): PaginatedResponse<TeamResponse> {
-        val pageable: Pageable = PageRequest.of(page, size)
+    fun getAllTeams(page: Int = 0, size: Int = 10, sortBy: String = "name", sortOrder: String = "asc"): PaginatedResponse<TeamResponse> {
+        val sort = createSort(sortBy, sortOrder)
+        val pageable: Pageable = PageRequest.of(page, size, sort)
         val teamsPage: Page<Team> = teamRepository.findAllWithMembersAndProjects(pageable)
 
         return PaginatedResponse(
@@ -151,14 +152,15 @@ class TeamService(
 
 //     @Cacheable(
 //        value = [CacheConfig.TEAM_CACHE],
-//        key = "'teams_search_' + #userId + '_' + #query + '_' + #page + '_' + #size"
+//        key = "'teams_search_' + #userId + '_' + #query + '_' + #page + '_' + #size + '_' + #sortBy + '_' + #sortOrder"
 //    )
-    fun searchTeamsByUser(userId: String, query: String, page: Int = 0, size: Int = 10): PaginatedResponse<TeamResponse> {
+    fun searchTeamsByUser(userId: String, query: String, page: Int = 0, size: Int = 10, sortBy: String = "name", sortOrder: String = "asc"): PaginatedResponse<TeamResponse> {
         val user = userRepository.findById(userId).orElseThrow {
             NotFoundException("User with id $userId not found")
         }
 
-        val pageable: Pageable = PageRequest.of(page, size)
+        val sort = createSort(sortBy, sortOrder)
+        val pageable: Pageable = PageRequest.of(page, size, sort)
 
         val teamsPage: Page<Team> = when (user.role) {
             Role.ADMIN, Role.MANAGER -> {
@@ -199,6 +201,10 @@ class TeamService(
         return students.map { it.toUserResponse() }
     }
 
+    private fun createSort(sortBy: String, sortOrder: String): Sort {
+        val direction = if (sortOrder.lowercase() == "desc") Sort.Direction.DESC else Sort.Direction.ASC
+        return Sort.by(direction, sortBy)
+    }
 
 }
 
