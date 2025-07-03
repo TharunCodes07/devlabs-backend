@@ -185,4 +185,89 @@ interface ProjectRepository : JpaRepository<Project, UUID> {
         WHERE t IN (SELECT team FROM Team team JOIN team.members member WHERE member = :user)
     """)
     fun findProjectsByUserWithRelations(@Param("user") user: com.devlabs.devlabsbackend.user.domain.User): List<Project>
+    
+    @Query("""
+        SELECT DISTINCT p FROM Project p 
+        LEFT JOIN FETCH p.team t
+        LEFT JOIN FETCH t.members
+        LEFT JOIN FETCH p.courses c
+        LEFT JOIN FETCH c.students
+        LEFT JOIN FETCH c.instructors
+        LEFT JOIN FETCH p.reviews
+        WHERE p.status = :status
+        ORDER BY p.updatedAt DESC
+    """)
+    fun findByStatusWithRelationsOrderByUpdatedAtDesc(@Param("status") status: ProjectStatus, pageable: Pageable): Page<Project>
+    
+    @Query("""
+        SELECT DISTINCT p FROM Project p 
+        LEFT JOIN FETCH p.team t
+        LEFT JOIN FETCH t.members
+        LEFT JOIN FETCH p.courses c
+        LEFT JOIN FETCH c.students
+        LEFT JOIN FETCH c.instructors
+        LEFT JOIN FETCH p.reviews
+        WHERE p.status = com.devlabs.devlabsbackend.project.domain.ProjectStatus.COMPLETED
+        AND EXISTS (SELECT 1 FROM Course course JOIN course.instructors instructor WHERE instructor = :faculty AND course MEMBER OF p.courses)
+        ORDER BY p.updatedAt DESC
+    """)
+    fun findCompletedProjectsByFacultyWithRelations(@Param("faculty") faculty: com.devlabs.devlabsbackend.user.domain.User, pageable: Pageable): Page<Project>
+    
+    @Query("""
+        SELECT DISTINCT p FROM Project p 
+        LEFT JOIN FETCH p.team t
+        LEFT JOIN FETCH t.members
+        LEFT JOIN FETCH p.courses c
+        LEFT JOIN FETCH c.students
+        LEFT JOIN FETCH c.instructors
+        LEFT JOIN FETCH p.reviews
+        WHERE p.status = com.devlabs.devlabsbackend.project.domain.ProjectStatus.COMPLETED
+        AND EXISTS (SELECT 1 FROM Team team JOIN team.members member WHERE member = :student AND team = p.team)
+        ORDER BY p.updatedAt DESC
+    """)
+    fun findCompletedProjectsByStudentWithRelations(@Param("student") student: com.devlabs.devlabsbackend.user.domain.User, pageable: Pageable): Page<Project>
+    
+    @Query("""
+        SELECT DISTINCT p FROM Project p 
+        LEFT JOIN FETCH p.team t
+        LEFT JOIN FETCH t.members
+        LEFT JOIN FETCH p.courses c
+        LEFT JOIN FETCH c.students
+        LEFT JOIN FETCH c.instructors
+        LEFT JOIN FETCH p.reviews
+        WHERE p.status = com.devlabs.devlabsbackend.project.domain.ProjectStatus.COMPLETED
+        AND LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%'))
+        ORDER BY p.updatedAt DESC
+    """)
+    fun searchCompletedProjectsWithRelations(@Param("query") query: String, pageable: Pageable): Page<Project>
+    
+    @Query("""
+        SELECT DISTINCT p FROM Project p 
+        LEFT JOIN FETCH p.team t
+        LEFT JOIN FETCH t.members
+        LEFT JOIN FETCH p.courses c
+        LEFT JOIN FETCH c.students
+        LEFT JOIN FETCH c.instructors
+        LEFT JOIN FETCH p.reviews
+        WHERE p.status = com.devlabs.devlabsbackend.project.domain.ProjectStatus.COMPLETED
+        AND LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%'))
+        AND EXISTS (SELECT 1 FROM Course course JOIN course.instructors instructor WHERE instructor = :faculty AND course MEMBER OF p.courses)
+        ORDER BY p.updatedAt DESC
+    """)
+    fun searchCompletedProjectsByFacultyWithRelations(@Param("faculty") faculty: com.devlabs.devlabsbackend.user.domain.User, @Param("query") query: String, pageable: Pageable): Page<Project>
+    
+    @Query("""
+        SELECT DISTINCT p FROM Project p 
+        LEFT JOIN FETCH p.team t
+        LEFT JOIN FETCH t.members
+        LEFT JOIN FETCH p.courses c
+        LEFT JOIN FETCH c.students
+        LEFT JOIN FETCH c.instructors
+        LEFT JOIN FETCH p.reviews
+        WHERE p.status = com.devlabs.devlabsbackend.project.domain.ProjectStatus.COMPLETED
+        AND LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%'))
+        AND EXISTS (SELECT 1 FROM Team team JOIN team.members member WHERE member = :student AND team = p.team)
+        ORDER BY p.updatedAt DESC
+    """)
+    fun searchCompletedProjectsByStudentWithRelations(@Param("student") student: com.devlabs.devlabsbackend.user.domain.User, @Param("query") query: String, pageable: Pageable): Page<Project>
 }

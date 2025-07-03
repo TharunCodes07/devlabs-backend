@@ -346,4 +346,45 @@ class ProjectController(
                 .body(mapOf("error" to "Failed to revert project completion: ${e.message}"))
         }
     }
+
+    @GetMapping("/user/{userId}/archive")
+    fun getArchivedProjects(
+        @PathVariable userId: String,
+        @RequestParam(required = false, defaultValue = "0") page: Int,
+        @RequestParam(required = false, defaultValue = "10") size: Int
+    ): ResponseEntity<Any> {
+        return try {
+            val projects = projectService.getArchivedProjects(userId, page, size)
+            ResponseEntity.ok(projects)
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to get archived projects: ${e.message}"))
+        }
+    }
+
+    @GetMapping("/user/{userId}/archive/search")
+    fun searchArchivedProjects(
+        @PathVariable userId: String,
+        @RequestParam query: String,
+        @RequestParam(required = false, defaultValue = "0") page: Int,
+        @RequestParam(required = false, defaultValue = "10") size: Int
+    ): ResponseEntity<Any> {
+        return try {
+            val projects = projectService.searchArchivedProjects(userId, query, page, size)
+            ResponseEntity.ok(projects)
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))
+        } catch (e: NotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to e.message))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to search archived projects: ${e.message}"))
+        }
+    }
 }

@@ -429,6 +429,68 @@ class ProjectService(
         projectRepository.save(project)
     }
 
+    @Transactional(readOnly = true)
+    fun getArchivedProjects(userId: String, page: Int = 0, size: Int = 10): PaginatedResponse<ProjectResponse> {
+        val user = userRepository.findById(userId).orElseThrow {
+            NotFoundException("User with id $userId not found")
+        }
+
+        val pageable: Pageable = PageRequest.of(page, size)
+
+        val projectsPage = when (user.role) {
+            Role.ADMIN, Role.MANAGER -> {
+                projectRepository.findByStatusWithRelationsOrderByUpdatedAtDesc(ProjectStatus.COMPLETED, pageable)
+            }
+            Role.FACULTY -> {
+                projectRepository.findCompletedProjectsByFacultyWithRelations(user, pageable)
+            }
+            Role.STUDENT -> {
+                projectRepository.findCompletedProjectsByStudentWithRelations(user, pageable)
+            }
+        }
+
+        return PaginatedResponse(
+            data = projectsPage.content.map { it.toProjectResponse() },
+            pagination = PaginationInfo(
+                current_page = page,
+                per_page = size,
+                total_pages = projectsPage.totalPages,
+                total_count = projectsPage.totalElements.toInt()
+            )
+        )
+    }
+
+    @Transactional(readOnly = true)
+    fun searchArchivedProjects(userId: String, query: String, page: Int = 0, size: Int = 10): PaginatedResponse<ProjectResponse> {
+        val user = userRepository.findById(userId).orElseThrow {
+            NotFoundException("User with id $userId not found")
+        }
+
+        val pageable: Pageable = PageRequest.of(page, size)
+
+        val projectsPage = when (user.role) {
+            Role.ADMIN, Role.MANAGER -> {
+                projectRepository.searchCompletedProjectsWithRelations(query, pageable)
+            }
+            Role.FACULTY -> {
+                projectRepository.searchCompletedProjectsByFacultyWithRelations(user, query, pageable)
+            }
+            Role.STUDENT -> {
+                projectRepository.searchCompletedProjectsByStudentWithRelations(user, query, pageable)
+            }
+        }
+
+        return PaginatedResponse(
+            data = projectsPage.content.map { it.toProjectResponse() },
+            pagination = PaginationInfo(
+                current_page = page,
+                per_page = size,
+                total_pages = projectsPage.totalPages,
+                total_count = projectsPage.totalElements.toInt()
+            )
+        )
+    }
+
     private fun createSort(sortBy: String, sortOrder: String): Sort {
         val direction = if (sortOrder.lowercase() == "desc") Sort.Direction.DESC else Sort.Direction.ASC
         return Sort.by(direction, sortBy)
