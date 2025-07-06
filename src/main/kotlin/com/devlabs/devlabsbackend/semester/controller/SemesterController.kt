@@ -63,7 +63,7 @@ class SemesterController(val semesterService: SemesterService, val userService: 
 
         return try {
             when {
-                userGroup.equals("admin", ignoreCase = true) -> {
+                userGroup.equals("admin", ignoreCase = true)  || userGroup.equals("manager", ignoreCase = true) -> {
                     val allSemesters = semesterService.getAllActiveSemesters()
                     ResponseEntity.ok(allSemesters)
                 }

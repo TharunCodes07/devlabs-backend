@@ -149,7 +149,7 @@ class BatchController(
         val userGroup = rawUserGroup.trim().removePrefix("[/").removeSuffix("]")
         try {
 
-            if (userGroup.equals("admin", ignoreCase = true)) {
+            if (userGroup.equals("admin", ignoreCase = true) || userGroup.equals("manager", ignoreCase = true)) {
                 val batches = batchService.getAllActiveBatches()
                 return ResponseEntity.ok(batches)
             } else if (userGroup.equals("faculty", ignoreCase = true)) {

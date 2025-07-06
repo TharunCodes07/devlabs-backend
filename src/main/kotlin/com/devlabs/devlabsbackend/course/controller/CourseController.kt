@@ -152,7 +152,7 @@ class CourseController(
             ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("message" to "User not authenticated"))
         val userGroup = rawUserGroup.trim().removePrefix("[/").removeSuffix("]")
         try {
-            if (userGroup.equals("admin", ignoreCase = true)) {
+            if (userGroup.equals("admin", ignoreCase = true) || userGroup.equals("manager", ignoreCase = true)) {
                 val courses = courseService.getAllActiveCourses()
                 return ResponseEntity.ok(courses)
             }

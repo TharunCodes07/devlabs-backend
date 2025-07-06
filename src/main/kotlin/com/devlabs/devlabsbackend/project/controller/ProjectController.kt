@@ -195,7 +195,7 @@ class ProjectController(
             ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("message" to "User not authenticated"))
         val userGroup = rawUserGroup.trim().removePrefix("[/").removeSuffix("]")
 
-        if(userGroup.equals("admin", ignoreCase = true)) {
+        if(userGroup.equals("admin", ignoreCase = true) || userGroup.equals("manager", ignoreCase = true)) {
             return getAllActiveProjects()
         }
         if(userGroup.equals("faculty", ignoreCase = true)) {
